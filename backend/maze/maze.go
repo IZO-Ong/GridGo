@@ -13,11 +13,6 @@ type Cell struct {
 	Walls    [4]bool
 }
 
-type Wall struct {
-	R1, C1 int
-	R2, C2 int
-}
-
 func NewMaze(rows, cols int) *Maze {
 	grid := make([][]Cell, rows)
 

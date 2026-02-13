@@ -1,24 +1,57 @@
 package maze
 
-import "math/rand/v2"
+import (
+	"fmt"
+	"math/rand/v2"
+	"sort"
+)
+
+type Wall struct {
+	R1, C1 int
+	R2, C2 int
+	Weight int
+}
 
 func (m *Maze) GenerateKruskal() {
+	m.generateWeightedKruskal(nil)
+}
+
+func (m *Maze) GenerateImageMaze(weights map[string]int) {
+	m.generateWeightedKruskal(weights)
+}
+
+func (m *Maze) generateWeightedKruskal(edgeWeights map[string]int) {
 	dsu := NewDSU(m.Rows * m.Cols)
-	walls := []Wall{}
+	var walls []Wall
 
 	for r := range m.Rows {
 		for c := range m.Cols {
 			if r < m.Rows-1 {
-				walls = append(walls, Wall{r, c, r + 1, c})
+				w := Wall{R1: r, C1: c, R2: r + 1, C2: c}
+				val, ok := edgeWeights[fmt.Sprintf("%d-%d-bottom", r, c)]
+
+				if ok {
+					w.Weight = val
+				} else {
+					w.Weight = rand.IntN(100) // random weight
+				}
+				walls = append(walls, w)
 			}
 			if c < m.Cols-1 {
-				walls = append(walls, Wall{r, c, r, c + 1})
+				w := Wall{R1: r, C1: c, R2: r, C2: c + 1}
+				val, ok := edgeWeights[fmt.Sprintf("%d-%d-right", r, c)]
+				if ok {
+					w.Weight = val
+				} else {
+					w.Weight = rand.IntN(100)
+				}
+				walls = append(walls, w)
 			}
 		}
 	}
 
-	rand.Shuffle(len(walls), func(i, j int) {
-		walls[i], walls[j] = walls[j], walls[i]
+	sort.Slice(walls, func(i, j int) bool {
+		return walls[i].Weight < walls[j].Weight
 	})
 
 	for _, w := range walls {
