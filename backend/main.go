@@ -81,7 +81,7 @@ func (m *Maze) RemoveWalls(r1, c1, r2, c2 int) {
 	}
 }
 
-func (m *Maze) Generate() {
+func (m *Maze) GenerateKruskal() {
 	dsu := NewDSU(m.Rows * m.Cols)
 	walls := []Wall{}
 
@@ -107,6 +107,27 @@ func (m *Maze) Generate() {
 		if dsu.Find(id1) != dsu.Find(id2) {
 			m.RemoveWalls(w.R1, w.C1, w.R2, w.C2)
 			dsu.Union(id1, id2)
+		}
+	}
+}
+
+func (m *Maze) GenerateRecursive(r, c int) {
+	m.Grid[r][c].Visited = true
+
+	dirs := [][]int{{-1, 0}, {0, 1}, {1, 0}, {0, -1}}
+
+	rand.Shuffle(len(dirs), func(i, j int) {
+		dirs[i], dirs[j] = dirs[j], dirs[i]
+	})
+
+	for _, d := range dirs {
+		nextR, nextC := r+d[0], c+d[1]
+
+		if nextR >= 0 && nextR < m.Rows && nextC >= 0 && nextC < m.Cols {
+			if !m.Grid[nextR][nextC].Visited {
+				m.RemoveWalls(r, c, nextR, nextC)
+				m.GenerateRecursive(nextR, nextC)
+			}
 		}
 	}
 }
@@ -162,7 +183,7 @@ func (m *Maze) Print() {
 }
 
 func main() {
-	var rows, cols int
+	var rows, cols, choice int
 
 	for {
 		fmt.Print("Enter number of rows (minimum 2): ")
@@ -186,8 +207,26 @@ func main() {
 		fmt.Println("Invalid input, please try again.")
 	}
 
+	for {
+		fmt.Println("\nChoose Generation Algorithm:")
+		fmt.Println("1. Randomized Kruskal's (Short passages, many dead ends)")
+		fmt.Println("2. Recursive Backtracker (Long, winding corridors)")
+		fmt.Print("Selection: ")
+		_, err := fmt.Scan(&choice)
+
+		if err == nil && (choice == 1 || choice == 2) {
+			break
+		}
+		fmt.Println("Invalid choice, please enter 1 or 2.")
+	}
+
 	maze := newMaze(rows, cols)
-	maze.Generate()
+
+	if choice == 1 {
+		maze.GenerateKruskal()
+	} else {
+		maze.GenerateRecursive(0, 0)
+	}
 
 	maze.Grid[0][0].Walls[0] = false
 	maze.Grid[rows-1][cols-1].Walls[2] = false
