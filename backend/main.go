@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"math/rand"
-	"strings"
 )
 
 type Cell struct {
@@ -17,63 +16,97 @@ type Maze struct {
 	Grid       [][]Cell
 }
 
-func (m *Maze) getRandomNeighbours(r, c int) [][]int {
-	neighbours := [][]int{}
+type DSU struct {
+	parent []int
+	rank   []int
+}
 
-	directions := [][]int{
-		{-1, 0},
-		{1, 0},
-		{0, 1},
-		{0, -1},
+type Wall struct {
+	R1, C1 int
+	R2, C2 int
+}
+
+func NewDSU(n int) *DSU {
+	p := make([]int, n)
+	r := make([]int, n)
+	for i := range p {
+		p[i] = i
+		r[i] = 0
 	}
 
-	for _, d := range directions {
-		nextR, nextC := r+d[0], c+d[1]
+	return &DSU{parent: p, rank: r}
+}
 
-		if nextR >= 0 && nextR < m.Rows && nextC >= 0 && nextC < m.Cols {
-			if !m.Grid[nextR][nextC].Visited {
-				neighbours = append(neighbours, []int{nextR, nextC})
-			}
+func (d *DSU) Find(i int) int {
+	if d.parent[i] == i {
+		return i
+	}
+	d.parent[i] = d.Find(d.parent[i])
+	return d.parent[i]
+}
+
+func (d *DSU) Union(i, j int) {
+	rootI := d.Find(i)
+	rootJ := d.Find(j)
+
+	if rootI != rootJ {
+		if d.rank[rootI] < d.rank[rootJ] {
+			d.parent[rootI] = rootJ
+		} else if d.rank[rootI] > d.rank[rootJ] {
+			d.parent[rootJ] = rootI
+		} else {
+			d.parent[rootI] = rootJ
+			d.rank[rootJ]++
 		}
 	}
-
-	rand.Shuffle(len(neighbours), func(i, j int) {
-		neighbours[i], neighbours[j] = neighbours[j], neighbours[i]
-	})
-
-	return neighbours
 }
 
 func (m *Maze) RemoveWalls(r1, c1, r2, c2 int) {
 	if r1 == r2 {
-		if c1 < c2 { // Move right
+		if c1 < c2 {
 			m.Grid[r1][c1].Walls[1] = false
 			m.Grid[r2][c2].Walls[3] = false
-		} else { // Move Left
+		} else {
 			m.Grid[r1][c1].Walls[3] = false
 			m.Grid[r2][c2].Walls[1] = false
 		}
 	} else {
 		if r1 < r2 {
-			m.Grid[r1][c1].Walls[0] = false
-			m.Grid[r2][c2].Walls[2] = false
-		} else {
 			m.Grid[r1][c1].Walls[2] = false
 			m.Grid[r2][c2].Walls[0] = false
+		} else {
+			m.Grid[r1][c1].Walls[0] = false
+			m.Grid[r2][c2].Walls[2] = false
 		}
 	}
 }
 
-func (m *Maze) Generate(r, c int) {
-	m.Grid[r][c].Visited = true
+func (m *Maze) Generate() {
+	dsu := NewDSU(m.Rows * m.Cols)
+	walls := []Wall{}
 
-	neighbours := m.getRandomNeighbours(r, c)
+	for r := range m.Rows {
+		for c := range m.Cols {
+			if r < m.Rows-1 {
+				walls = append(walls, Wall{r, c, r + 1, c})
+			}
+			if c < m.Cols-1 {
+				walls = append(walls, Wall{r, c, r, c + 1})
+			}
+		}
+	}
 
-	for _, coords := range neighbours {
-		nextR, nextC := coords[0], coords[1]
-		if !m.Grid[nextR][nextC].Visited {
-			m.RemoveWalls(r, c, nextR, nextC)
-			m.Generate(nextR, nextC)
+	rand.Shuffle(len(walls), func(i, j int) {
+		walls[i], walls[j] = walls[j], walls[i]
+	})
+
+	for _, w := range walls {
+		id1 := w.R1*m.Cols + w.C1
+		id2 := w.R2*m.Cols + w.C2
+
+		if dsu.Find(id1) != dsu.Find(id2) {
+			m.RemoveWalls(w.R1, w.C1, w.R2, w.C2)
+			dsu.Union(id1, id2)
 		}
 	}
 }
@@ -106,7 +139,6 @@ func (m *Maze) Print() {
 				fmt.Print("+   ")
 			}
 		}
-
 		fmt.Println("+")
 
 		for c := range m.Cols {
@@ -118,11 +150,47 @@ func (m *Maze) Print() {
 		}
 		fmt.Println("|")
 	}
-	fmt.Println(strings.Repeat("+---", m.Cols) + "+")
+
+	for c := range m.Cols {
+		if m.Grid[m.Rows-1][c].Walls[2] {
+			fmt.Print("+---")
+		} else {
+			fmt.Print("+   ")
+		}
+	}
+	fmt.Println("+")
 }
 
 func main() {
-	maze := newMaze(10, 10)
-	maze.Generate(0, 0)
+	var rows, cols int
+
+	for {
+		fmt.Print("Enter number of rows (minimum 2): ")
+		_, err := fmt.Scan(&rows)
+
+		if err == nil && rows >= 2 {
+			break
+		}
+
+		fmt.Println("Invalid input, please try again.")
+	}
+
+	for {
+		fmt.Print("Enter number of columns (minimum 2): ")
+		_, err := fmt.Scan(&cols)
+
+		if err == nil && cols >= 2 {
+			break
+		}
+
+		fmt.Println("Invalid input, please try again.")
+	}
+
+	maze := newMaze(rows, cols)
+	maze.Generate()
+
+	maze.Grid[0][0].Walls[0] = false
+	maze.Grid[rows-1][cols-1].Walls[2] = false
+
 	maze.Print()
 }
