@@ -6,71 +6,124 @@ import (
 	"image/draw"
 	"image/png"
 	"os"
+	"runtime"
+	"sync"
 )
 
 // SaveAsImage renders the maze's structure into a PNG file
+// orchestrates the setup, drawing and file persistence stages
 func (m *Maze) SaveAsImage(filename string, cellSize int) error {
-	// add 1 pixel to the total width/height to ensure the
+	img := m.prepareCanvas(cellSize)
+	m.drawMaze(img, cellSize)
+	return m.exportToPNG(img, filename)
+}
+
+// prepareCanvas initializes the image buffer and background.
+func (m *Maze) prepareCanvas(cellSize int) *image.RGBA {
+	// add 1 pixel to the total width/height to ensure
 	// closing edges of the rightmost and bottommost cells are rendered
 	imgWidth := m.Cols*cellSize + 1
 	imgHeight := m.Rows*cellSize + 1
-
 	img := image.NewRGBA(image.Rect(0, 0, imgWidth, imgHeight))
 
 	// initialise white background
 	draw.Draw(img, img.Bounds(), &image.Uniform{color.White}, image.Point{}, draw.Src)
+	return img
+}
 
-	// shading translates mathematical weights into RGB values
-	getWallColor := func(weight int) color.RGBA {
-		// high weights are rendered black
-		if weight >= 1000 {
-			return color.RGBA{0, 0, 0, 255}
-		}
+// drawMaze iterates through the grid and paints each active wall.
+func (m *Maze) drawMaze(img *image.RGBA, cellSize int) {
+	var wg sync.WaitGroup
 
-		// low weights (randomized filler) are rendered in light gray
-		// modulo variance provides a slight texture to empty spaces
-		intensity := uint8(230 - (weight % 30))
-		return color.RGBA{intensity, intensity, intensity, 255}
+	numCPU := runtime.NumCPU()
+	rowsPerWorker := m.Rows / numCPU
+
+	// avoid spawning more workers if maze is small
+	if rowsPerWorker == 0 {
+		numCPU = 1
+		rowsPerWorker = m.Rows
 	}
 
-	// iterates through the grid and paints each active wall
-	for r := 0; r < m.Rows; r++ {
-		for c := 0; c < m.Cols; c++ {
-			x := c * cellSize
-			y := r * cellSize
+	for w := range numCPU {
+		wg.Add(1)
+		startY := w * rowsPerWorker
+		endY := startY + rowsPerWorker
 
-			// TOP WALL
-			if m.Grid[r][c].Walls[0] {
-				col := getWallColor(m.Grid[r][c].WallWeights[0])
-				for i := 0; i <= cellSize; i++ {
-					img.Set(x+i, y, col)
+		if w == numCPU-1 {
+			endY = m.Rows // cover any remainder rows
+		}
+
+		// we do a goRoutine
+		go func(rMin, rMax int) {
+			defer wg.Done()
+			for r := rMin; r < rMax; r++ {
+				for c := 0; c < m.Cols; c++ {
+					x := c * cellSize
+					y := r * cellSize
+					cell := m.Grid[r][c]
+
+					// TOP WALL
+					if cell.Walls[0] {
+						m.paintWall(img, x, y, cellSize, 0, cell.WallWeights[0])
+					}
+					// RIGHT WALL
+					if cell.Walls[1] {
+						m.paintWall(img, x, y, cellSize, 1, cell.WallWeights[1])
+					}
+					// BOTTOM WALL
+					if cell.Walls[2] {
+						m.paintWall(img, x, y, cellSize, 2, cell.WallWeights[2])
+					}
+					// LEFT WALL
+					if cell.Walls[3] {
+						m.paintWall(img, x, y, cellSize, 3, cell.WallWeights[3])
+					}
 				}
 			}
-			// RIGHT WALL
-			if m.Grid[r][c].Walls[1] {
-				col := getWallColor(m.Grid[r][c].WallWeights[1])
-				for i := 0; i <= cellSize; i++ {
-					img.Set(x+cellSize, y+i, col)
-				}
-			}
-			// BOTTOM WALL
-			if m.Grid[r][c].Walls[2] {
-				col := getWallColor(m.Grid[r][c].WallWeights[2])
-				for i := 0; i <= cellSize; i++ {
-					img.Set(x+i, y+cellSize, col)
-				}
-			}
-			// LEFT WALL
-			if m.Grid[r][c].Walls[3] {
-				col := getWallColor(m.Grid[r][c].WallWeights[3])
-				for i := 0; i <= cellSize; i++ {
-					img.Set(x, y+i, col)
-				}
-			}
+		}(startY, endY)
+	}
+	wg.Wait()
+}
+
+// paintWall handles the pixel-level drawing of a single boundary.
+func (m *Maze) paintWall(img *image.RGBA, x, y, cellSize, direction, weight int) {
+	col := m.getWallColor(weight)
+
+	switch direction {
+	case 0: // TOP
+		for i := 0; i <= cellSize; i++ {
+			img.Set(x+i, y, col)
+		}
+	case 1: // RIGHT
+		for i := 0; i <= cellSize; i++ {
+			img.Set(x+cellSize, y+i, col)
+		}
+	case 2: // BOTTOM
+		for i := 0; i <= cellSize; i++ {
+			img.Set(x+i, y+cellSize, col)
+		}
+	case 3: // LEFT
+		for i := 0; i <= cellSize; i++ {
+			img.Set(x, y+i, col)
 		}
 	}
+}
 
-	// exports the in-memory buffer to a PNG
+// shading translates mathematical weights into RGB values.
+func (m *Maze) getWallColor(weight int) color.RGBA {
+	// high weights are rendered black
+	if weight >= 1000 {
+		return color.RGBA{0, 0, 0, 255}
+	}
+
+	// low weights are rendered in light gray
+	// modulo variance provides a slight texture to empty spaces
+	intensity := uint8(230 - (weight % 30))
+	return color.RGBA{intensity, intensity, intensity, 255}
+}
+
+// exportToPNG handles file I/O and PNG encoding.
+func (m *Maze) exportToPNG(img *image.RGBA, filename string) error {
 	f, err := os.Create(filename)
 	if err != nil {
 		return err

@@ -7,6 +7,8 @@ import (
 	_ "image/png"
 	"math"
 	"os"
+	"runtime"
+	"sync"
 )
 
 // GetEdgeWeights transforms a source image into a map of wall priorities.
@@ -14,13 +16,7 @@ import (
 // image is preserved by assigning high weights to structural edges, which
 // Kruskal's algorithm will then prioritise keeping as walls.
 func GetEdgeWeights(path string, rows, cols int) (map[string]int, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	img, _, err := image.Decode(file)
+	img, err := decodeImage(path)
 	if err != nil {
 		return nil, err
 	}
@@ -28,18 +24,42 @@ func GetEdgeWeights(path string, rows, cols int) (map[string]int, error) {
 	bounds := img.Bounds()
 	width, height := bounds.Max.X, bounds.Max.Y
 
-	// stage 1
-	// we convert to grayscale to focus purely on luminance edges,
-	// ignoring color data
+	gray := convertToGrayscale(img, bounds)
+	mags, angles := computeGradients(gray, width, height)
+	nmsMags := applyNMS(mags, angles, width, height)
+	weights := mapToWeights(nmsMags, rows, cols, width, height)
+
+	return weights, nil
+}
+
+// decodeImage handles the initial file I/O and decoding.
+func decodeImage(path string) (image.Image, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	img, _, err := image.Decode(file)
+	return img, err
+}
+
+// Convert to grayscale to focus purely on luminance edges,
+// ignoring color data
+func convertToGrayscale(img image.Image, bounds image.Rectangle) *image.Gray {
 	gray := image.NewGray(bounds)
-	for y := range height {
-		for x := 0; x < width; x++ {
+
+	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+		for x := bounds.Min.X; x < bounds.Max.X; x++ {
 			gray.Set(x, y, img.At(x, y))
 		}
 	}
 
-	// stage 2
-	// use sobel kernels to identify where intensity changes rapidly
+	return gray
+}
+
+// Use sobel kernels to identify where intensity changes rapidly
+func computeGradients(gray *image.Gray, width, height int) ([][]float64, [][]float64) {
 	mags := make([][]float64, height)
 	angles := make([][]float64, height)
 	for i := range mags {
@@ -50,25 +70,46 @@ func GetEdgeWeights(path string, rows, cols int) (map[string]int, error) {
 	gx := [][]int{{-1, 0, 1}, {-2, 0, 2}, {-1, 0, 1}}
 	gy := [][]int{{-1, -2, -1}, {0, 0, 0}, {1, 2, 1}}
 
-	for y := 1; y < height-1; y++ {
-		for x := 1; x < width-1; x++ {
-			var sumX, sumY float64
-			for i := -1; i <= 1; i++ {
-				for j := -1; j <= 1; j++ {
-					px, py := x+j, y+i
-					lum := float64(gray.GrayAt(px, py).Y)
-					sumX += lum * float64(gx[i+1][j+1])
-					sumY += lum * float64(gy[i+1][j+1])
+	// splits image processing using go routines
+	var wg sync.WaitGroup
+	numCPU := runtime.NumCPU()
+	rowsPerWorker := (height - 2) / numCPU
+
+	for w := 0; w < numCPU; w++ {
+		wg.Add(1)
+		startY := 1 + (w * rowsPerWorker)
+		endY := startY + rowsPerWorker
+
+		if w == numCPU-1 {
+			endY = height - 1
+		}
+
+		go func(yMin, yMax int) {
+			defer wg.Done()
+			for y := yMin; y < yMax; y++ {
+				for x := 1; x < width-1; x++ {
+					var sumX, sumY float64
+					for i := -1; i <= 1; i++ {
+						for j := -1; j <= 1; j++ {
+							px, py := x+j, y+i
+							lum := float64(gray.GrayAt(px, py).Y)
+							sumX += lum * float64(gx[i+1][j+1])
+							sumY += lum * float64(gy[i+1][j+1])
+						}
+					}
+					mags[y][x] = math.Sqrt(sumX*sumX + sumY*sumY)
+					// normalise angle to 0-180
+					angles[y][x] = math.Mod(math.Atan2(sumY, sumX)*180/math.Pi+180, 180)
 				}
 			}
-			mags[y][x] = math.Sqrt(sumX*sumX + sumY*sumY)
-			// normalise angle to 0-180
-			angles[y][x] = math.Mod(math.Atan2(sumY, sumX)*180/math.Pi+180, 180)
-		}
+		}(startY, endY)
 	}
+	wg.Wait()
+	return mags, angles
+}
 
-	// stage 3:
-	// non-maximum suppression to thin out "blurry" edges
+// Non-maximum suppression to thin out "blurry" edges
+func applyNMS(mags, angles [][]float64, width, height int) [][]float64 {
 	nmsMags := make([][]float64, height)
 	for i := range nmsMags {
 		nmsMags[i] = make([]float64, width)
@@ -99,10 +140,12 @@ func GetEdgeWeights(path string, rows, cols int) (map[string]int, error) {
 			}
 		}
 	}
+	return nmsMags
+}
 
-	// stage 4:
-	// translate pixel magnitudes into Kruskal's weights.
-	// and thresholds help maintain connectivity in the silhouette
+// Translate pixel magnitudes into Kruskal's weights.
+// and thresholds help maintain connectivity in the silhouette
+func mapToWeights(nmsMags [][]float64, rows, cols, width, height int) map[string]int {
 	weights := make(map[string]int)
 	highThresh := 100.0
 	lowThresh := 40.0
@@ -115,7 +158,6 @@ func GetEdgeWeights(path string, rows, cols int) (map[string]int, error) {
 			mag := nmsMags[imgY][imgX]
 
 			if mag >= highThresh {
-				// high weight locks priority walls into spanning tree.
 				weights[fmt.Sprintf("%d-%d-top", r, c)] = 5000
 				weights[fmt.Sprintf("%d-%d-left", r, c)] = 5000
 			} else if mag >= lowThresh {
@@ -124,6 +166,5 @@ func GetEdgeWeights(path string, rows, cols int) (map[string]int, error) {
 			}
 		}
 	}
-
-	return weights, nil
+	return weights
 }
