@@ -1,6 +1,10 @@
 package maze
 
-import "fmt"
+import (
+	"fmt"
+	"math"
+	"math/rand/v2"
+)
 
 // Maze represents the overall grid structure.
 // It serves as the primary state container for both generation
@@ -8,6 +12,8 @@ import "fmt"
 type Maze struct {
 	Rows, Cols int
 	Grid       [][]Cell
+	Start      [2]int // [row, col]
+	End        [2]int // [row, col]
 }
 
 // Cell represents a single coordinate in the maze.
@@ -18,6 +24,75 @@ type Cell struct {
 	Visited     bool    // Used by DFS (Recursive Backtracker) algorithm
 	Walls       [4]bool // 0:Top, 1:Right, 2:Bottom, 3:Left
 	WallWeights [4]int  // Maps Canny magnitudes to individual wall intensity
+}
+
+// SetManualStartEnd allows specific placement of entrance/exit
+func (m *Maze) SetManualStartEnd(sr, sc, er, ec int) error {
+	isBorder := func(r, c int) bool {
+		return r == 0 || r == m.Rows-1 || c == 0 || c == m.Cols-1
+	}
+
+	if !isBorder(sr, sc) || !isBorder(er, ec) {
+		return fmt.Errorf("start and end points must be on the maze border")
+	}
+
+	m.Start = [2]int{sr, sc}
+	m.End = [2]int{er, ec}
+
+	m.clipBorderWall(sr, sc)
+	m.clipBorderWall(er, ec)
+	return nil
+}
+
+// SetRandomStartEnd picks two unique points on the maze boundary.
+func (m *Maze) SetRandomStartEnd() {
+	// Manhattan distance threshold (at least 50% of max)
+	minDist := float64(m.Rows+m.Cols) * 0.5
+
+	for {
+		sR, sC := m.getRandomBorderPoint()
+		eR, eC := m.getRandomBorderPoint()
+
+		dist := math.Abs(float64(sR-eR)) + math.Abs(float64(sC-eC))
+		if (sR != eR || sC != eC) && dist >= minDist {
+			m.Start = [2]int{sR, sC}
+			m.End = [2]int{eR, eC}
+			break
+		}
+	}
+
+	m.clipBorderWall(m.Start[0], m.Start[1])
+	m.clipBorderWall(m.End[0], m.End[1])
+}
+
+func (m *Maze) getRandomBorderPoint() (int, int) {
+	side := rand.IntN(4)
+	switch side {
+	case 0:
+		return 0, rand.IntN(m.Cols)
+	case 1:
+		return rand.IntN(m.Rows), m.Cols - 1
+	case 2:
+		return m.Rows - 1, rand.IntN(m.Cols)
+	default:
+		return rand.IntN(m.Rows), 0
+	}
+}
+
+// clipBorderWall removes exterior boundary wall based on cell location.
+func (m *Maze) clipBorderWall(r, c int) {
+	if r == 0 {
+		m.Grid[r][c].Walls[0] = false
+	}
+	if r == m.Rows-1 {
+		m.Grid[r][c].Walls[2] = false
+	}
+	if c == 0 {
+		m.Grid[r][c].Walls[3] = false
+	}
+	if c == m.Cols-1 {
+		m.Grid[r][c].Walls[1] = false
+	}
 }
 
 // NewMaze initializes a grid where every cell is completely enclosed.
@@ -51,12 +126,20 @@ func (m *Maze) Print() {
 		}
 		fmt.Println("+")
 
-		// draw left/right walls
 		for c := range m.Cols {
 			if m.Grid[r][c].Walls[3] {
-				fmt.Print("|   ")
+				fmt.Print("|")
 			} else {
-				fmt.Print("    ")
+				fmt.Print(" ")
+			}
+
+			// markers
+			if r == m.Start[0] && c == m.Start[1] {
+				fmt.Print(" * ")
+			} else if r == m.End[0] && c == m.End[1] {
+				fmt.Print(" - ")
+			} else {
+				fmt.Print("   ")
 			}
 		}
 		fmt.Println("|")

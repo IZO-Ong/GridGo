@@ -10,6 +10,26 @@ import (
 	"os"
 )
 
+func getCoordinatePair(label string, maxRows, maxCols int) (int, int) {
+	var r, c int
+	for {
+		fmt.Printf("\nSet %s (Row 0-%d, Col 0-%d):\n", label, maxRows-1, maxCols-1)
+		fmt.Print("  Row: ")
+		fmt.Scan(&r)
+		fmt.Print("  Col: ")
+		fmt.Scan(&c)
+
+		if r >= 0 && r < maxRows && c >= 0 && c < maxCols {
+			if r == 0 || r == maxRows-1 || c == 0 || c == maxCols-1 {
+				return r, c
+			}
+			fmt.Println("  !! Selection must be on the outer boundary (Row 0, Max Row, Col 0, or Max Col).")
+		} else {
+			fmt.Printf("  !! Coordinates out of bounds for %dx%d grid.\n", maxRows, maxCols)
+		}
+	}
+}
+
 func main() {
 	var rows, cols, choice int
 	var imgPath string
@@ -83,6 +103,32 @@ func main() {
 
 	myMaze := maze.NewMaze(rows, cols)
 
+	fmt.Println("\n--- Entry/Exit Configuration ---")
+	fmt.Println("1. Randomized (Distant border points)")
+	fmt.Println("2. Manual (Pick your own coordinates)")
+	fmt.Print("Selection: ")
+	var startChoice int
+	fmt.Scan(&startChoice)
+
+	if startChoice == 2 {
+		fmt.Println("\n--- Manual Border Placement ---")
+
+		// 1. Get the Entrance
+		sr, sc := getCoordinatePair("ENTRANCE", rows, cols)
+
+		// 2. Get the Exit
+		er, ec := getCoordinatePair("EXIT", rows, cols)
+
+		if err := myMaze.SetManualStartEnd(sr, sc, er, ec); err == nil {
+			fmt.Println("Entrance and Exit successfully set!")
+		} else {
+			fmt.Printf("Error: %v. Reverting to randomized points.\n", err)
+			myMaze.SetRandomStartEnd()
+		}
+	}
+
+	fmt.Println("Generating maze...")
+
 	switch choice {
 	case 1:
 		// get weights using canny pipeline
@@ -98,11 +144,6 @@ func main() {
 		myMaze.GenerateRecursive(0, 0)
 	}
 
-	// post processing entrance/exit
-	// clear top left wall and the bottom right wall
-	myMaze.Grid[0][0].Walls[0] = false
-	myMaze.Grid[rows-1][cols-1].Walls[2] = false
-
 	// output
 	fmt.Print("\nDisplay in terminal (1) or Save as PNG (2)? ")
 	var displayChoice int
@@ -117,6 +158,7 @@ func main() {
 		if err != nil {
 			fmt.Printf("Error saving image: %v\n", err)
 		} else {
+			fmt.Println("Generating image...")
 			fmt.Printf("Successfully saved to %s\n", outName)
 		}
 	} else {

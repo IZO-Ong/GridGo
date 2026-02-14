@@ -5,6 +5,7 @@ import (
 	"image"
 	_ "image/jpeg"
 	_ "image/png"
+	"io"
 	"math"
 	"os"
 	"runtime"
@@ -15,8 +16,8 @@ import (
 // uses a Canny filter pipeline to ensure that the  outline of the
 // image is preserved by assigning high weights to structural edges, which
 // Kruskal's algorithm will then prioritise keeping as walls.
-func GetEdgeWeights(path string, rows, cols int) (map[string]int, error) {
-	img, err := decodeImage(path)
+func GetEdgeWeights(r io.Reader, rows, cols int) (map[string]int, error) {
+	img, _, err := image.Decode(r)
 	if err != nil {
 		return nil, err
 	}
@@ -150,8 +151,8 @@ func mapToWeights(nmsMags [][]float64, rows, cols, width, height int) map[string
 	highThresh := 100.0
 	lowThresh := 40.0
 
-	for r := 0; r < rows; r++ {
-		for c := 0; c < cols; c++ {
+	for r := range rows {
+		for c := range cols {
 			imgX := c * width / cols
 			imgY := r * height / rows
 

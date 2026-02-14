@@ -62,6 +62,12 @@ func (m *Maze) drawMaze(img *image.RGBA, cellSize int) {
 					y := r * cellSize
 					cell := m.Grid[r][c]
 
+					if r == m.Start[0] && c == m.Start[1] {
+						m.fillCell(img, x, y, cellSize, color.RGBA{144, 238, 144, 255}) // Light Green
+					} else if r == m.End[0] && c == m.End[1] {
+						m.fillCell(img, x, y, cellSize, color.RGBA{255, 99, 71, 255}) // Red
+					}
+
 					// TOP WALL
 					if cell.Walls[0] {
 						m.paintWall(img, x, y, cellSize, 0, cell.WallWeights[0])
@@ -83,6 +89,15 @@ func (m *Maze) drawMaze(img *image.RGBA, cellSize int) {
 		}(startY, endY)
 	}
 	wg.Wait()
+}
+
+// fillCell paints the interior of a maze square.
+func (m *Maze) fillCell(img *image.RGBA, x, y, size int, col color.RGBA) {
+	for i := 1; i < size; i++ {
+		for j := 1; j < size; j++ {
+			img.Set(x+i, y+j, col)
+		}
+	}
 }
 
 // paintWall handles the pixel-level drawing of a single boundary.
