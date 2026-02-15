@@ -52,7 +52,7 @@ export default function Home() {
       )}
 
       <section className="relative border-4 border-black h-[750px] bg-zinc-50 overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col">
-        {/* Output Header */}
+        {/* Header */}
         <div className="h-7 border-b-2 border-black bg-white flex items-center px-3 justify-between z-30 shrink-0">
           <span className="text-[10px] font-bold tracking-widest uppercase">
             MAZE_OUTPUT
