@@ -34,7 +34,33 @@ func (m *Maze) GenerateKruskal() {
 // GenerateImageMaze triggers a guided Kruskal's generation using weights
 // derived from an image.
 func (m *Maze) GenerateImageMaze(weights map[string]int) {
-	m.Weights = weights
+    m.Weights = weights
+
+    for r := 0; r < m.Rows; r++ {
+        for c := 0; c < m.Cols; c++ {
+            if r == 0 {
+                if w, ok := weights[fmt.Sprintf("%d-%d-top", r, c)]; ok {
+                    m.Grid[r][c].WallWeights[0] = w
+                }
+            }
+            if c == 0 {
+                if w, ok := weights[fmt.Sprintf("%d-%d-left", r, c)]; ok {
+                    m.Grid[r][c].WallWeights[3] = w
+                }
+            }
+            if r == m.Rows-1 {
+                if w, ok := weights[fmt.Sprintf("%d-%d-bottom", r, c)]; ok {
+                    m.Grid[r][c].WallWeights[2] = w
+                }
+            }
+            if c == m.Cols-1 {
+                if w, ok := weights[fmt.Sprintf("%d-%d-right", r, c)]; ok {
+                    m.Grid[r][c].WallWeights[1] = w
+                }
+            }
+        }
+    }
+
 	m.generateWeightedKruskal(weights)
 }
 

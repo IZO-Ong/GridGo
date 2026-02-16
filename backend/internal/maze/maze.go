@@ -251,3 +251,40 @@ func (m *Maze) CalculateStats() MazeStats {
 
     return stats
 }
+
+func (m *Maze) SyncGridToWeights(original map[string]int) {
+    m.Weights = make(map[string]int)
+    for r := 0; r < m.Rows; r++ {
+        for c := 0; c < m.Cols; c++ {
+            
+            keyTop := fmt.Sprintf("%d-%d-top", r, c)
+            m.Weights[keyTop] = m.getWeightForWall(r, c, 0, keyTop, original)
+
+            keyLeft := fmt.Sprintf("%d-%d-left", r, c)
+            m.Weights[keyLeft] = m.getWeightForWall(r, c, 3, keyLeft, original)
+
+            if r == m.Rows-1 {
+                keyBottom := fmt.Sprintf("%d-%d-bottom", r, c)
+                m.Weights[keyBottom] = m.getWeightForWall(r, c, 2, keyBottom, original)
+            }
+
+            if c == m.Cols-1 {
+                keyRight := fmt.Sprintf("%d-%d-right", r, c)
+                m.Weights[keyRight] = m.getWeightForWall(r, c, 1, keyRight, original)
+            }
+        }
+    }
+}
+
+func (m *Maze) getWeightForWall(r, c, wallIdx int, key string, original map[string]int) int {
+    if !m.Grid[r][c].Walls[wallIdx] {
+        return 0 // Path
+    }
+    if val, ok := original[key]; ok {
+        return val
+    }
+    if original != nil {
+        return 120 
+    }
+    return 255
+}

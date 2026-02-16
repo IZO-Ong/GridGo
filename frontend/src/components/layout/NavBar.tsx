@@ -1,10 +1,10 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useAuth } from "@/context/AuthContext"; // 1. Import the hook
 
 export default function NavBar() {
-  const [user, setUser] = useState<string | null>(null);
+  const { user, logout } = useAuth(); // 2. Use global state instead of local state
   const pathname = usePathname();
 
   const navItems = [
@@ -13,15 +13,10 @@ export default function NavBar() {
     { label: "Forum", href: "/forum" },
   ];
 
-  useEffect(() => {
-    const storedUser = localStorage.getItem("gridgo_user");
-    if (storedUser) setUser(storedUser);
-  }, []);
+  // REMOVED: useEffect and useState for 'user'
 
   const handleLogout = () => {
-    localStorage.removeItem("gridgo_token");
-    localStorage.removeItem("gridgo_user");
-    window.location.href = "/";
+    logout(); // 3. Use the context logout function
   };
 
   return (
@@ -54,7 +49,7 @@ export default function NavBar() {
           <button
             onClick={handleLogout}
             title="Terminate Session"
-            className="w-6 h-6 border-2 border-black flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors group"
+            className="w-6 h-6 border-2 border-black flex items-center justify-center hover:bg-black hover:text-white transition-colors cursor-pointer group"
           >
             <span className="text-[10px] font-black">X</span>
           </button>

@@ -116,42 +116,48 @@ func handleGenerateMaze(w http.ResponseWriter, r *http.Request) {
     genType := r.FormValue("type")
     myMaze := maze.NewMaze(rows, cols)
 
-	switch genType {
-	case "image":
-		file, _, err := r.FormFile("image")
-		if err != nil {
-			http.Error(w, "Image required for image-type maze", http.StatusBadRequest)
-			return
-		}
-		defer file.Close()
+    var originalWeights map[string]int
 
-		weights, err := maze.GetEdgeWeights(file, rows, cols)
-		if err != nil {
-			http.Error(w, "Vision processing failed", http.StatusInternalServerError)
-			return
-		}
-		myMaze.GenerateImageMaze(weights)
+    switch genType {
+    case "image":
+        file, _, err := r.FormFile("image")
+        if err != nil {
+            http.Error(w, "Image required", http.StatusBadRequest)
+            return
+        }
+        defer file.Close()
 
-	case "kruskal":
-		myMaze.GenerateKruskal()
+        weights, err := maze.GetEdgeWeights(file, rows, cols)
+        if err != nil {
+            http.Error(w, "Vision processing failed", http.StatusInternalServerError)
+            return
+        }
+        originalWeights = weights
+        myMaze.GenerateImageMaze(weights)
 
-	case "recursive":
-		myMaze.GenerateRecursive(0, 0)
+    case "kruskal":
+        myMaze.GenerateKruskal()
 
-	default:
-		http.Error(w, "Invalid generation type", http.StatusBadRequest)
-		return
-	}
+    case "recursive":
+        myMaze.GenerateRecursive(0, 0)
+
+    default:
+        http.Error(w, "Invalid generation type", http.StatusBadRequest)
+        return
+    }
+
+    myMaze.SyncGridToWeights(originalWeights)
 
     myMaze.SetRandomStartEnd()
-	weightsBytes, _ := json.Marshal(myMaze.Weights)
+    
+    weightsBytes, _ := json.Marshal(myMaze.Weights)
     stats := myMaze.CalculateStats()
 
     mazeID := "M-" + strconv.Itoa(rand.Intn(9000)+1000) + "-X"
 
     dbMaze := models.Maze{
         ID:           mazeID,
-		WeightsJSON:  string(weightsBytes),
+        WeightsJSON:  string(weightsBytes),
         Rows:         rows,
         Cols:         cols,
         StartRow:     myMaze.Start[0],
@@ -249,13 +255,38 @@ func handleGetMaze(w http.ResponseWriter, r *http.Request) {
 
     reconstructed.GenerateImageMaze(savedWeights)
 
+    for r := 0; r < m.Rows; r++ {
+        for c := 0; c < m.Cols; c++ {
+            if r == 0 {
+                if val, ok := savedWeights[fmt.Sprintf("%d-%d-top", r, c)]; ok {
+                    reconstructed.Grid[r][c].WallWeights[0] = val
+                }
+            }
+            if c == 0 {
+                if val, ok := savedWeights[fmt.Sprintf("%d-%d-left", r, c)]; ok {
+                    reconstructed.Grid[r][c].WallWeights[3] = val
+                }
+            }
+            if r == m.Rows-1 {
+                if val, ok := savedWeights[fmt.Sprintf("%d-%d-bottom", r, c)]; ok {
+                    reconstructed.Grid[r][c].WallWeights[2] = val
+                }
+            }
+            if c == m.Cols-1 {
+                if val, ok := savedWeights[fmt.Sprintf("%d-%d-right", r, c)]; ok {
+                    reconstructed.Grid[r][c].WallWeights[1] = val
+                }
+            }
+        }
+    }
+
     reconstructed.SetManualStartEnd(m.StartRow, m.StartCol, m.EndRow, m.EndCol)
 
     response := map[string]interface{}{
         "id":         m.ID,
         "rows":       m.Rows,
         "cols":       m.Cols,
-        "grid":       reconstructed.Grid, // Re-generated walls
+        "grid":       reconstructed.Grid,
         "start":      [2]int{m.StartRow, m.StartCol},
         "end":        [2]int{m.EndRow, m.EndCol},
         "dead_ends":  m.DeadEnds,
@@ -267,30 +298,42 @@ func handleGetMaze(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleLogin(w http.ResponseWriter, r *http.Request) {
-	var creds struct {
-		Username string `json:"username"`
-		Password string `json:"password"`
-	}
-	json.NewDecoder(r.Body).Decode(&creds)
+    var creds struct {
+        Identifier string `json:"username"`
+        Password   string `json:"password"`
+    }
+    if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
+        http.Error(w, "Invalid payload", 400)
+        return
+    }
 
-	var user models.User
-	if err := db.DB.First(&user, "username = ?", creds.Username).Error; err != nil {
-		http.Error(w, "INVALID_CREDENTIALS", http.StatusUnauthorized)
-		return
-	}
+    var user models.User
+    if err := db.DB.Where("username = ? OR email = ?", creds.Identifier, creds.Identifier).First(&user).Error; err != nil {
+        http.Error(w, "INVALID_CREDENTIALS", http.StatusUnauthorized)
+        return
+    }
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(creds.Password)); err != nil {
-		http.Error(w, "INVALID_CREDENTIALS", http.StatusUnauthorized)
-		return
-	}
+    if user.PasswordHash == "OAUTH_ACCOUNT" {
+        http.Error(w, "PLEASE_LOGIN_WITH_GOOGLE", http.StatusUnauthorized)
+        return
+    }
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user_id": user.ID,
-		"exp":     time.Now().Add(time.Hour * 72).Unix(),
-	})
+    if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(creds.Password)); err != nil {
+        http.Error(w, "INVALID_CREDENTIALS", http.StatusUnauthorized)
+        return
+    }
 
-	tokenString, _ := token.SignedString(getJWTKey())
-	json.NewEncoder(w).Encode(map[string]string{"token": tokenString, "username": user.Username})
+    token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+        "user_id": user.ID,
+        "exp":     time.Now().Add(time.Hour * 72).Unix(),
+    })
+    tokenString, _ := token.SignedString(getJWTKey())
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(map[string]string{
+        "token":    tokenString,
+        "username": user.Username,
+    })
 }
 
 func GenerateOTP() string {
@@ -300,7 +343,8 @@ func GenerateOTP() string {
 
 func handleRegister(w http.ResponseWriter, r *http.Request) {
     var creds struct {
-        Email    string `json:"username"`
+        Email    string `json:"email"`
+		Username string `json:"username"`
         Password string `json:"password"`
     }
     if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
@@ -313,51 +357,38 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 
     pending := models.PendingUser{
         Email:        creds.Email,
+        Username:     creds.Username,
         PasswordHash: string(hashedPassword),
         OTP:          otp,
         ExpiresAt:    time.Now().Add(10 * time.Minute),
     }
 
     if err := db.DB.Save(&pending).Error; err != nil {
-        http.Error(w, "DATABASE_ERROR", http.StatusInternalServerError)
+        http.Error(w, "Email already in use for registration", http.StatusConflict)
         return
     }
 
     go sendEmail(creds.Email, otp)
-    
     w.WriteHeader(http.StatusAccepted)
 }
 
-// Final account creation after 6-digit code check
 func handleVerify(w http.ResponseWriter, r *http.Request) {
-    var req struct {
-        Email string `json:"email"`
-        Code  string `json:"code"`
-    }
+    var req struct { Email string; Code string }
     json.NewDecoder(r.Body).Decode(&req)
 
     var pending models.PendingUser
     if err := db.DB.First(&pending, "email = ? AND otp = ?", req.Email, req.Code).Error; err != nil {
-        http.Error(w, "INVALID_OR_EXPIRED_CODE", http.StatusUnauthorized)
+        http.Error(w, "Invalid code", 401)
         return
     }
 
-    if time.Now().After(pending.ExpiresAt) {
-        db.DB.Delete(&pending)
-        http.Error(w, "CODE_EXPIRED", http.StatusUnauthorized)
-        return
-    }
-
-    user := models.User{
-        Username:     pending.Email, 
+    newUser := models.User{
+        Username:     pending.Username,
+        Email:        pending.Email,
         PasswordHash: pending.PasswordHash,
     }
 
-    if err := db.DB.Create(&user).Error; err != nil {
-        http.Error(w, "IDENTITY_COLLISION", http.StatusConflict)
-        return
-    }
-
+    db.DB.Create(&newUser)
     db.DB.Delete(&pending)
     w.WriteHeader(http.StatusCreated)
 }
@@ -386,7 +417,7 @@ func handleOAuthLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
-	q := r.URL.Query()
+    q := r.URL.Query()
     q.Set("provider", "google")
     r.URL.RawQuery = q.Encode()
 
@@ -398,13 +429,28 @@ func handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
         return
     }
 
+    var dbUser models.User
+    result := db.DB.Where("email = ?", user.Email).First(&dbUser)
+
+    if result.Error != nil {
+        dbUser = models.User{
+            Username:     user.NickName,
+            Email:        user.Email,
+            PasswordHash: "OAUTH_ACCOUNT",
+        }
+        if err := db.DB.Create(&dbUser).Error; err != nil {
+            http.Redirect(w, r, frontendURL+"/login?error=DB_CREATE_FAILED", http.StatusTemporaryRedirect)
+            return
+        }
+    }
+
     token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-        "user_id": user.Email,
+        "user_id": dbUser.ID,
         "exp":     time.Now().Add(time.Hour * 72).Unix(),
     })
     
     tokenString, _ := token.SignedString(getJWTKey())
 
-    url := fmt.Sprintf("%s/auth-callback?token=%s&username=%s", frontendURL, tokenString, user.NickName)
+    url := fmt.Sprintf("%s/auth-callback?token=%s&username=%s", frontendURL, tokenString, dbUser.Username)
     http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }

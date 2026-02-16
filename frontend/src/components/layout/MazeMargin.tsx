@@ -21,6 +21,26 @@ export default function MazeMargin({ side }: { side: "left" | "right" }) {
   };
 
   useEffect(() => {
+    const handleZoomOpacity = () => {
+      const width = window.innerWidth;
+      const startFade = 1200;
+      const endFade = 1100;
+
+      if (width < endFade) {
+        setOpacity(0);
+      } else if (width > startFade) {
+        setOpacity(1);
+      } else {
+        setOpacity((width - endFade) / (startFade - endFade));
+      }
+    };
+
+    window.addEventListener("resize", handleZoomOpacity);
+    handleZoomOpacity();
+    return () => window.removeEventListener("resize", handleZoomOpacity);
+  }, []);
+
+  useEffect(() => {
     const drawMaze = () => {
       const canvas = canvasRef.current;
       if (!canvas) return;

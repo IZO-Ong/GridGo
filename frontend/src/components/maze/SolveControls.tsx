@@ -6,7 +6,7 @@ import { MazeData } from "@/hooks/useMazeGeneration";
 interface SolveControlsProps {
   mazeId: string;
   setMazeId: (id: string) => void;
-  handleLoadID: () => void; // Removed handleLoadLast
+  handleLoadID: () => void;
   startPoint: [number, number];
   setStartPoint: (p: [number, number]) => void;
   endPoint: [number, number];
