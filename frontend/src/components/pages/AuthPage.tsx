@@ -60,7 +60,7 @@ export default function AuthPage() {
 
       if (isLogin) {
         const data = await res.json();
-        login(data.token, data.username); // Triggers NavBar update
+        login(data.token, data.username);
         router.push("/");
       } else {
         setIsVerifying(true);
