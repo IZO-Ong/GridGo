@@ -31,6 +31,9 @@ export default function GenerateControls({
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Clamping utility to enforce 2-300 range
+  const clamp = (val: number) => Math.min(Math.max(2, val), 300);
+
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     if (e.type === "dragenter" || e.type === "dragover") setIsDragging(true);
@@ -46,13 +49,18 @@ export default function GenerateControls({
   return (
     <form onSubmit={onSubmit} className="grid grid-cols-12 gap-4 items-end">
       <div className="col-span-3 space-y-2">
-        <label className="block font-bold uppercase tracking-widest text-[9px]">
-          Grid_Dimensions
-        </label>
+        <div className="flex justify-between items-end">
+          <label className="block font-bold uppercase tracking-widest text-[9px]">
+            Grid_Dimensions
+          </label>
+          <span className="text-[8px] font-mono opacity-40">RANGE: 2-300</span>
+        </div>
         <GridDimensionsInput
           rows={dims.rows}
           cols={dims.cols}
           onUpdate={updateDim}
+          min={2}
+          max={{ rows: 300, cols: 300 }}
         />
       </div>
 
@@ -68,7 +76,11 @@ export default function GenerateControls({
       </div>
 
       <div
-        className={`col-span-5 space-y-2 transition-all ${genType === "image" ? "opacity-100" : "opacity-0 pointer-events-none hidden"}`}
+        className={`col-span-5 space-y-2 transition-all ${
+          genType === "image"
+            ? "opacity-100"
+            : "opacity-0 pointer-events-none hidden"
+        }`}
       >
         <label className="block font-bold text-[9px] uppercase tracking-widest">
           Source_Image
@@ -77,7 +89,9 @@ export default function GenerateControls({
           onDragOver={handleDrag}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
-          className={`relative w-full h-[38px] border-2 border-dashed flex items-stretch transition-colors cursor-pointer bg-white ${isDragging ? "bg-zinc-100 border-black" : "border-zinc-300"}`}
+          className={`relative w-full h-[38px] border-2 border-dashed flex items-stretch transition-colors cursor-pointer bg-white ${
+            isDragging ? "bg-zinc-100 border-black" : "border-zinc-300"
+          }`}
         >
           <input
             ref={fileInputRef}
@@ -102,18 +116,20 @@ export default function GenerateControls({
         disabled={isSubmitDisabled || loading}
         className={`col-span-12 border-2 border-black p-4 font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all flex items-center justify-between px-8 group
         ${
-          loading
-            ? "bg-black text-white cursor-wait"
-            : isSubmitDisabled
-              ? "bg-zinc-100 text-zinc-400 opacity-50 cursor-not-allowed"
-              : "bg-white hover:bg-black hover:text-white cursor-pointer active:translate-y-1 active:shadow-none"
+          loading || isSubmitDisabled
+            ? "bg-zinc-100 text-zinc-400 opacity-50 cursor-not-allowed" // Greyed out style
+            : "bg-white hover:bg-black hover:text-white cursor-pointer active:translate-y-1 active:shadow-none"
         }`}
       >
         <span className="italic tracking-tighter text-lg font-black uppercase">
           {loading ? ">>> PROCESSING_SEQUENCE..." : ">>> GENERATE_MAZE"}
         </span>
         {loading && (
-          <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+          <div className="flex gap-1">
+            <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
+            <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
+            <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce" />
+          </div>
         )}
       </button>
     </form>

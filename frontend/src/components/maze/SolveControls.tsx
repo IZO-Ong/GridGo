@@ -6,8 +6,7 @@ import { MazeData } from "@/hooks/useMazeGeneration";
 interface SolveControlsProps {
   mazeId: string;
   setMazeId: (id: string) => void;
-  handleLoadLast: () => void;
-  handleLoadID: () => void;
+  handleLoadID: () => void; // Removed handleLoadLast
   startPoint: [number, number];
   setStartPoint: (p: [number, number]) => void;
   endPoint: [number, number];
@@ -25,7 +24,6 @@ interface SolveControlsProps {
 export default function SolveControls({
   mazeId,
   setMazeId,
-  handleLoadLast,
   handleLoadID,
   startPoint,
   setStartPoint,
@@ -52,6 +50,7 @@ export default function SolveControls({
         <label className="block font-bold uppercase tracking-widest text-[9px]">
           Reference_ID
         </label>
+        {/* Single-button cloud load interface */}
         <div className="flex border-2 border-black h-[38px] divide-x-2 divide-black bg-white">
           <input
             type="text"
@@ -63,17 +62,9 @@ export default function SolveControls({
           <button
             type="button"
             onClick={handleLoadID}
-            className="px-3 bg-white hover:bg-black hover:text-white transition-colors text-[9px] font-black uppercase cursor-pointer shrink-0"
+            className="px-4 bg-white hover:bg-black hover:text-white transition-colors text-[9px] font-black uppercase cursor-pointer shrink-0"
           >
             LOAD
-          </button>
-          <button
-            type="button"
-            onClick={handleLoadLast}
-            className="px-3 bg-zinc-100 hover:bg-black hover:text-white transition-colors text-[9px] font-black uppercase cursor-pointer shrink-0 border-l-2 border-black"
-            title="Load last generated maze"
-          >
-            LAST
           </button>
         </div>
       </div>
@@ -88,14 +79,15 @@ export default function SolveControls({
           labelOverride={{ row: "Row", col: "Col" }}
           onUpdate={(dim, val) =>
             setStartPoint([
-              dim === "rows"
-                ? validate(val, activeMaze?.rows || 1)
-                : startPoint[0],
-              dim === "cols"
-                ? validate(val, activeMaze?.cols || 1)
-                : startPoint[1],
+              dim === "rows" ? val : startPoint[0],
+              dim === "cols" ? val : startPoint[1],
             ])
           }
+          min={0}
+          max={{
+            rows: (activeMaze?.rows || 1) - 1,
+            cols: (activeMaze?.cols || 1) - 1,
+          }}
         />
       </div>
 

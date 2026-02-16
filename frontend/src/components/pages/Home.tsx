@@ -110,9 +110,17 @@ export default function Home() {
 
       <section className="relative border-4 border-black h-[750px] bg-zinc-50 overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col">
         <div className="h-7 border-b-2 border-black bg-white flex items-center px-3 justify-between z-30 shrink-0">
-          <span className="text-[10px] font-bold tracking-widest uppercase">
-            MAZE_OUTPUT
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] font-bold tracking-widest uppercase">
+              MAZE_OUTPUT
+            </span>
+            {activeMaze?.id && (
+              <span className="bg-black text-white px-2 py-0.5 text-[9px] font-black tracking-tighter">
+                {activeMaze.id}
+              </span>
+            )}
+          </div>
+
           <span className="text-[10px] opacity-30 font-bold uppercase">
             DIM:{" "}
             {activeMaze

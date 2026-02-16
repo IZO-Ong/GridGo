@@ -104,22 +104,27 @@ func handleGenerateMaze(w http.ResponseWriter, r *http.Request) {
 	}
 
     myMaze.SetRandomStartEnd()
+	weightsBytes, _ := json.Marshal(myMaze.Weights)
+    stats := myMaze.CalculateStats()
 
-    gridBytes, _ := json.Marshal(myMaze.Grid)
-	stats := myMaze.CalculateStats()
+    mazeID := "M-" + strconv.Itoa(rand.Intn(9000)+1000) + "-X"
 
-	dbMaze := models.Maze{
-		ID:         "M-" + strconv.Itoa(rand.Intn(9000)+1000) + "-X",
-		GridJSON:   string(gridBytes),
-		Rows:       rows,
-		Cols:       cols,
-		StartRow:   myMaze.Start[0],
-		StartCol:   myMaze.Start[1],
-		EndRow:     myMaze.End[0],
-		EndCol:     myMaze.End[1],
-		DeadEnds:   stats.DeadEnds,
-		Complexity: stats.Complexity,
-	}
+    dbMaze := models.Maze{
+        ID:           mazeID,
+		WeightsJSON:  string(weightsBytes),
+        Rows:         rows,
+        Cols:         cols,
+        StartRow:     myMaze.Start[0],
+        StartCol:     myMaze.Start[1],
+        EndRow:       myMaze.End[0],
+        EndCol:       myMaze.End[1],
+        DeadEnds:     stats.DeadEnds,
+        Complexity:   stats.Complexity,
+    }
+
+    myMaze.ID = mazeID
+    myMaze.DeadEnds = stats.DeadEnds
+    myMaze.Complexity = stats.Complexity
 
     result := db.DB.Create(&dbMaze)
     if result.Error != nil {
@@ -185,11 +190,6 @@ func handleSolveMaze(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleGetMaze(w http.ResponseWriter, r *http.Request) {
-    if r.Method != http.MethodGet {
-        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-        return
-    }
-
     mazeID := r.URL.Query().Get("id")
     if mazeID == "" {
         http.Error(w, "Maze ID required", http.StatusBadRequest)
@@ -197,22 +197,29 @@ func handleGetMaze(w http.ResponseWriter, r *http.Request) {
     }
 
     var m models.Maze
-    result := db.DB.First(&m, "id = ?", mazeID)
-    if result.Error != nil {
+    if err := db.DB.First(&m, "id = ?", mazeID).Error; err != nil {
         http.Error(w, "Maze not found", http.StatusNotFound)
         return
     }
 
-    var grid [][]maze.Cell
-    json.Unmarshal([]byte(m.GridJSON), &grid)
+    reconstructed := maze.NewMaze(m.Rows, m.Cols)
+
+    var savedWeights map[string]int
+    json.Unmarshal([]byte(m.WeightsJSON), &savedWeights)
+
+    reconstructed.GenerateImageMaze(savedWeights)
+
+    reconstructed.SetManualStartEnd(m.StartRow, m.StartCol, m.EndRow, m.EndCol)
 
     response := map[string]interface{}{
-        "id":    m.ID,
-        "rows":  m.Rows,
-        "cols":  m.Cols,
-        "grid":  grid,
-        "start": [2]int{m.StartRow, m.StartCol},
-        "end":   [2]int{m.EndRow, m.EndCol},
+        "id":         m.ID,
+        "rows":       m.Rows,
+        "cols":       m.Cols,
+        "grid":       reconstructed.Grid, // Re-generated walls
+        "start":      [2]int{m.StartRow, m.StartCol},
+        "end":        [2]int{m.EndRow, m.EndCol},
+        "dead_ends":  m.DeadEnds,
+        "complexity": m.Complexity,
     }
 
     w.Header().Set("Content-Type", "application/json")

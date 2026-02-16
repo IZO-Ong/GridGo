@@ -3,6 +3,7 @@ import { useState } from "react";
 import { generateMaze } from "@/lib/api";
 
 export interface MazeData {
+  id: string;
   rows: number;
   cols: number;
   start: [number, number];

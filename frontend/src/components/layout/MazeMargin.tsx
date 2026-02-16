@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 
-// Stable bitwise hash for coordinate-based randomness
 const seededRandom = (r: number, c: number) => {
   let h = (r * 0x45d9f3b) ^ c;
   h = ((h >>> 16) ^ h) * 0x45d9f3b;
@@ -14,14 +13,15 @@ export default function MazeMargin({ side }: { side: "left" | "right" }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [opacity, setOpacity] = useState(1);
 
+  // Map the side to specific Tailwind classes so the compiler can find them
+  const sideClasses = {
+    left: "left-0",
+    right: "right-0",
+  };
+
   useEffect(() => {
     const handleZoomOpacity = () => {
       const width = window.innerWidth;
-
-      /** * FASTER FADE LOGIC:
-       * Start fading at 1120px, hit 0% at 1060px.
-       * This 60px window makes the transition very snappy.
-       */
       const startFade = 1200;
       const endFade = 1100;
 
@@ -30,7 +30,6 @@ export default function MazeMargin({ side }: { side: "left" | "right" }) {
       } else if (width > startFade) {
         setOpacity(1);
       } else {
-        // Linear interpolation over a tighter 60px range
         setOpacity((width - endFade) / (startFade - endFade));
       }
     };
@@ -45,8 +44,6 @@ export default function MazeMargin({ side }: { side: "left" | "right" }) {
       const cols = 7;
       const cellSize = marginWidth / cols;
 
-      // Anchor height to scrollHeight but keep it divisible by cellSize
-      // to prevent "shuffling" rows on zoom/resize.
       const rawHeight = document.documentElement.scrollHeight;
       const fixedHeight = Math.ceil(rawHeight / cellSize) * cellSize;
 
@@ -55,7 +52,7 @@ export default function MazeMargin({ side }: { side: "left" | "right" }) {
         canvas.height = fixedHeight;
       }
 
-      ctx.strokeStyle = "black"; // Solid black lines
+      ctx.strokeStyle = "black";
       ctx.lineWidth = 1.5;
       ctx.lineCap = "square";
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -69,7 +66,6 @@ export default function MazeMargin({ side }: { side: "left" | "right" }) {
           const carveNorth = seededRandom(r, c);
 
           ctx.beginPath();
-          // Avoid drawing in the very top-right/left corner for layout polish
           if (r === 0 && c === cols - 1) continue;
 
           if (r === 0) {
@@ -115,7 +111,7 @@ export default function MazeMargin({ side }: { side: "left" | "right" }) {
   return (
     <canvas
       ref={canvasRef}
-      className={`absolute top-0 ${side}-0 pointer-events-none z-0 transition-opacity duration-150 ease-out`}
+      className={`absolute top-0 ${sideClasses[side]} pointer-events-none z-0 transition-opacity duration-150 ease-out`}
       style={{
         width: "70px",
         opacity: opacity,

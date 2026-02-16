@@ -1,7 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import {
-  loadGenerateSession,
   saveSolveSession,
   loadSolveSession,
   savePreferences,
@@ -21,11 +20,12 @@ const SOLVE_ALGORITHMS = [
 export default function Solve() {
   const [activeMaze, setActiveMaze] = useState<MazeData | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null); // NEW: Error state
 
   const [solveType, setSolveType] = useState("astar");
   const [isSolving, setIsSolving] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [mazeId, setMazeId] = useState("G-7724-X");
+  const [mazeId, setMazeId] = useState(""); // Default empty for placeholder
 
   const [startPoint, setStartPoint] = useState<[number, number]>([0, 0]);
   const [endPoint, setEndPoint] = useState<[number, number]>([0, 0]);
@@ -76,21 +76,19 @@ export default function Solve() {
 
   const handleLoadID = async () => {
     if (!mazeId) return;
-
     setIsSolving(true);
+    setError(null); // Clear previous errors
     try {
       const data = await getMazeById(mazeId);
-
       setActiveMaze(data);
       setStartPoint(data.start);
       setEndPoint(data.end);
       setSolution(null);
       setIsAnimating(false);
-
       await saveSolveSession(data);
     } catch (err) {
       console.error("CLOUD_FETCH_ERROR:", err);
-      alert(`COULD NOT FIND REFERENCE: ${mazeId}. Ensure the ID is valid.`);
+      setError(`COULD_NOT_FIND_REFERENCE: ${mazeId}`);
     } finally {
       setIsSolving(false);
     }
@@ -121,55 +119,68 @@ export default function Solve() {
     }
   };
 
-  const handleLoadLast = async () => {
-    try {
-      const saved = await loadGenerateSession();
-      if (saved) {
-        setActiveMaze(saved);
-        setStartPoint(saved.start as [number, number]);
-        setEndPoint(saved.end as [number, number]);
-        setSolution(null);
-        setIsAnimating(false);
-        await saveSolveSession(saved);
-      }
-    } catch (e) {
-      console.error("LOAD_ERROR:", e);
-    }
-  };
-
   return (
     <div className="space-y-8">
-      <SolveControls
-        mazeId={mazeId}
-        setMazeId={setMazeId}
-        handleLoadLast={handleLoadLast}
-        handleLoadID={handleLoadID}
-        startPoint={startPoint}
-        setStartPoint={setStartPoint}
-        endPoint={endPoint}
-        setEndPoint={setEndPoint}
-        solveType={solveType}
-        setSolveType={setSolveType}
-        handleAction={handleAction}
-        activeMaze={activeMaze}
-        isSolving={isSolving}
-        isAnimating={isAnimating}
-        algorithms={SOLVE_ALGORITHMS}
-        validate={validate}
-      />
+      {/* Greyed out logic handled by passing isSolving to controls */}
+      <div
+        className={
+          isSolving ? "opacity-50 pointer-events-none transition-opacity" : ""
+        }
+      >
+        <SolveControls
+          mazeId={mazeId}
+          setMazeId={setMazeId}
+          handleLoadID={handleLoadID}
+          startPoint={startPoint}
+          setStartPoint={setStartPoint}
+          endPoint={endPoint}
+          setEndPoint={setEndPoint}
+          solveType={solveType}
+          setSolveType={setSolveType}
+          handleAction={handleAction}
+          activeMaze={activeMaze}
+          isSolving={isSolving}
+          isAnimating={isAnimating}
+          algorithms={SOLVE_ALGORITHMS}
+          validate={validate}
+        />
+      </div>
+
+      {error && (
+        <div className="p-3 bg-red-50 border-2 border-red-600 text-red-600 font-bold uppercase text-[11px]">
+          {`>> ERROR_SEQUENCE: ${error}`}
+        </div>
+      )}
 
       <section className="relative border-4 border-black h-[750px] bg-zinc-50 overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col">
+        {/* Updated Header with Black ID Chip */}
         <div className="h-7 border-b-2 border-black bg-white flex items-center px-3 justify-between z-30 shrink-0 uppercase text-[10px] font-bold">
-          <span>
-            SOLVER_OUTPUT{" "}
-            {activeMaze && `[${activeMaze.rows}X${activeMaze.cols}]`}
-          </span>
+          <div className="flex items-center gap-3">
+            <span>SOLVER_OUTPUT</span>
+            {activeMaze?.id && (
+              <span className="bg-black text-white px-2 py-0.5 text-[9px] font-black tracking-tighter">
+                {activeMaze.id}
+              </span>
+            )}
+          </div>
           <div className="flex gap-4 opacity-30 font-mono text-[9px]">
+            <span>
+              DIM: {activeMaze ? `${activeMaze.rows}X${activeMaze.cols}` : "--"}
+            </span>
             <span>VISITED: {solution?.visited?.length ?? "--"}</span>
             <span>PATH: {solution?.path?.length ?? "--"}</span>
           </div>
         </div>
+
         <div className="relative flex-1 bg-white overflow-hidden flex items-center justify-center">
+          {isSolving && (
+            <div className="absolute inset-0 bg-white/50 z-20 flex items-center justify-center backdrop-blur-[1px]">
+              <span className="font-black italic animate-pulse">
+                INITIALIZING_DATA_STREAM...
+              </span>
+            </div>
+          )}
+
           {activeMaze ? (
             <MazeCanvas
               maze={activeMaze}

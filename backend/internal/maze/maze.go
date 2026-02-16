@@ -10,12 +10,15 @@ import (
 // It serves as the primary state container for both generation
 // and rendering logic.
 type Maze struct {
-    Rows    int            `json:"rows"`
-    Cols    int            `json:"cols"`
-    Grid    [][]Cell       `json:"grid"`
-    Start   [2]int         `json:"start"`
-    End     [2]int         `json:"end"`
-    Weights map[string]int `json:"weights"` 
+    ID         string         `json:"id"`
+    Rows       int            `json:"rows"`
+    Cols       int            `json:"cols"`
+    Start      [2]int         `json:"start"`
+    End        [2]int         `json:"end"`
+    Grid       [][]Cell       `json:"grid"`
+    Weights    map[string]int `json:"weights"`
+    DeadEnds   int            `json:"dead_ends"`
+    Complexity float64        `json:"complexity"`
 }
 
 // Cell represents a single coordinate in the maze.
