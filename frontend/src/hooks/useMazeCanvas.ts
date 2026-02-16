@@ -54,12 +54,11 @@ export function useMazeCanvas(maze: MazeData | null) {
     []
   );
 
-  // Re-center when maze or cell size changes
+  // Re-center
   useEffect(() => {
     if (dynamicCellSize > 0) centerMaze(dynamicCellSize);
   }, [maze, dynamicCellSize, centerMaze]);
 
-  // Handle zooming via native wheel events
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
