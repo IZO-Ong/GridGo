@@ -12,6 +12,13 @@ type User struct {
     Mazes        []Maze    `gorm:"foreignKey:CreatorID"`
 }
 
+type PendingUser struct {
+    Email        string    `gorm:"primaryKey"`
+    PasswordHash string    `gorm:"not null"`
+    OTP          string    `gorm:"not null"`
+    ExpiresAt    time.Time `gorm:"not null"`
+}
+
 type Maze struct {
     ID          string  `gorm:"primaryKey"`
     CreatorID   *string `gorm:"type:uuid"`

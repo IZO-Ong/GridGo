@@ -1,7 +1,7 @@
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export async function generateMaze(formData: FormData) {
-  const response = await fetch(`${BASE_URL}/generate`, {
+  const response = await fetch(`${BASE_URL}/maze/generate`, {
     method: "POST",
     body: formData,
   });
@@ -15,7 +15,7 @@ export async function generateMaze(formData: FormData) {
 }
 
 export async function renderMazeImage(mazeData: any) {
-  const response = await fetch(`${BASE_URL}/render`, {
+  const response = await fetch(`${BASE_URL}/maze/render`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(mazeData),
@@ -35,7 +35,7 @@ export async function renderMazeImage(mazeData: any) {
 }
 
 export async function solveMaze(mazeData: any, algorithm: string) {
-  const response = await fetch(`${BASE_URL}/solve`, {
+  const response = await fetch(`${BASE_URL}/maze/solve`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ maze: mazeData, algorithm }),
@@ -50,7 +50,7 @@ export async function solveMaze(mazeData: any, algorithm: string) {
 }
 
 export async function getMazeById(id: string) {
-  const response = await fetch(`${BASE_URL}/get?id=${id}`);
+  const response = await fetch(`${BASE_URL}/maze/get?id=${id}`);
   if (!response.ok) throw new Error("MAZE_NOT_FOUND");
   return response.json();
 }

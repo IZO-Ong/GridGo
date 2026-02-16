@@ -95,8 +95,6 @@ func (m *Maze) generateWeightedKruskal(edgeWeights map[string]int) {
 // GenerateRecursive sets up the grid with 255 weights before starting the DFS.
 func (m *Maze) GenerateRecursive(r, c int) {
 	// If this is the starting call, initialize the weights. 
-	// (Note: in a recursive context, you might prefer calling initialize 
-	// in a public wrapper, but this works if r/c are 0).
 	if r == 0 && c == 0 {
 		m.initializeWallWeights(255)
 	}
