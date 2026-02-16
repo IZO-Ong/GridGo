@@ -29,6 +29,14 @@ type Cell struct {
 	WallWeights [4]int  `json:"wall_weights"`
 }
 
+// Fun statistics on mazes
+type MazeStats struct {
+    DeadEnds      int     `json:"dead_ends"`
+    Junctions     int     `json:"junctions"`
+    StraightWays  int     `json:"straight_ways"`
+    Complexity    float64 `json:"complexity"`
+}
+
 // SetManualStartEnd allows specific placement of entrance/exit
 func (m *Maze) SetManualStartEnd(sr, sc, er, ec int) error {
 	isBorder := func(r, c int) bool {
@@ -206,4 +214,37 @@ func (m *Maze) GetNeighbors(p Point) []Point {
 	}
 
 	return neighbors
+}
+
+// CalculateStats calculates statistics of mazes, specifically
+// deadends, straightways, complexity, and junctions
+func (m *Maze) CalculateStats() MazeStats {
+    stats := MazeStats{}
+
+    for r := range m.Rows {
+        for c := range m.Cols {
+            openCount := 0
+            for _, isWall := range m.Grid[r][c].Walls {
+                if !isWall {
+                    openCount++
+                }
+            }
+
+            switch openCount {
+            case 1:
+                stats.DeadEnds++
+            case 2:
+                stats.StraightWays++
+            case 3, 4:
+                stats.Junctions++
+            }
+        }
+    }
+
+    // Complexity score based on junction-to-dead-end ratio
+    if stats.DeadEnds > 0 {
+        stats.Complexity = float64(stats.Junctions) / float64(stats.DeadEnds)
+    }
+
+    return stats
 }

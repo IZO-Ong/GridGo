@@ -106,17 +106,20 @@ func handleGenerateMaze(w http.ResponseWriter, r *http.Request) {
     myMaze.SetRandomStartEnd()
 
     gridBytes, _ := json.Marshal(myMaze.Grid)
+	stats := myMaze.CalculateStats()
 
-    dbMaze := models.Maze{
-        ID:        "G-" + strconv.Itoa(rand.Intn(9000)+1000) + "-X",
-        GridJSON:  string(gridBytes),
-        Rows:      rows,
-        Cols:      cols,
-        StartRow:  myMaze.Start[0],
-        StartCol:  myMaze.Start[1],
-        EndRow:    myMaze.End[0],
-        EndCol:    myMaze.End[1],
-    }
+	dbMaze := models.Maze{
+		ID:         "M-" + strconv.Itoa(rand.Intn(9000)+1000) + "-X",
+		GridJSON:   string(gridBytes),
+		Rows:       rows,
+		Cols:       cols,
+		StartRow:   myMaze.Start[0],
+		StartCol:   myMaze.Start[1],
+		EndRow:     myMaze.End[0],
+		EndCol:     myMaze.End[1],
+		DeadEnds:   stats.DeadEnds,
+		Complexity: stats.Complexity,
+	}
 
     result := db.DB.Create(&dbMaze)
     if result.Error != nil {

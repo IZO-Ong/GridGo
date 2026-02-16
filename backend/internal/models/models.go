@@ -22,7 +22,7 @@ type Maze struct {
     StartCol    int       `gorm:"not null"`
     EndRow      int       `gorm:"not null"`
     EndCol      int       `gorm:"not null"`
-    PathLength  int
+    Complexity  float64
     DeadEnds    int
     CreatedAt   time.Time
 }
