@@ -23,7 +23,7 @@ export default function NavBar() {
     <div className="flex items-center gap-6">
       <div className="flex items-center gap-3">
         <Link
-          href={user ? "#" : "/login"}
+          href={user ? `/profile/${user}` : "/login"}
           className="flex items-center gap-3 group h-10"
         >
           <div

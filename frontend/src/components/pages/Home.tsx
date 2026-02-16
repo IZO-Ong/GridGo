@@ -11,6 +11,8 @@ import GenerateControls from "@/components/maze/GenerateControls";
 import { useImageDimensions } from "@/hooks/useImageDimensions";
 import { useMazeGeneration, MazeData } from "@/hooks/useMazeGeneration";
 
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+
 const ALGORITHMS = [
   { id: "image", label: "IMAGE_KRUSKAL" },
   { id: "kruskal", label: "RANDOM_KRUSKAL" },
@@ -73,20 +75,38 @@ export default function Home() {
     clampDimensions();
 
     const formData = new FormData(e.currentTarget);
-
     formData.set("type", genType);
-
     if (genType === "image" && selectedFile) {
       formData.set("image", selectedFile);
     }
 
     const newMaze = await executeGeneration(formData);
+
     if (newMaze) {
       setActiveMaze(newMaze);
       await saveGenerateSession(newMaze);
+
+      setTimeout(async () => {
+        const canvas = document.querySelector("canvas");
+        if (canvas) {
+          const b64 = canvas.toDataURL("image/webp", 0.5);
+
+          try {
+            await fetch(`${BASE_URL}/maze/thumbnail`, {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${localStorage.getItem("gridgo_token")}`,
+              },
+              body: JSON.stringify({ id: newMaze.id, thumbnail: b64 }),
+            });
+          } catch (err) {
+            console.error("THUMBNAIL_SYNC_FAILURE", err);
+          }
+        }
+      }, 200);
     }
   };
-
   return (
     <div className="space-y-8">
       <GenerateControls

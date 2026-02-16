@@ -27,11 +27,17 @@ func main() {
 
 	mux := http.NewServeMux()
 
+    // Maze Routes
 	mux.HandleFunc("/api/maze/generate", middleware.OptionalAuth(handlers.HandleGenerateMaze))
 	mux.HandleFunc("/api/maze/get", handlers.HandleGetMaze)
 	mux.HandleFunc("/api/maze/solve", handlers.HandleSolveMaze)
 	mux.HandleFunc("/api/maze/render", handlers.HandleRenderMaze)
+	mux.HandleFunc("/api/maze/thumbnail", handlers.HandleUpdateThumbnail)
 
+    // User & Profile Routes
+    mux.HandleFunc("/api/profile", handlers.HandleGetProfile)
+
+    // Auth Routes
 	mux.HandleFunc("/api/login", handlers.HandleLogin)
 	mux.HandleFunc("/api/register", handlers.HandleRegister)
 	mux.HandleFunc("/api/verify", handlers.HandleVerify)

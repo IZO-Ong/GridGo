@@ -20,12 +20,12 @@ const SOLVE_ALGORITHMS = [
 export default function Solve() {
   const [activeMaze, setActiveMaze] = useState<MazeData | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);
-  const [error, setError] = useState<string | null>(null); // NEW: Error state
+  const [error, setError] = useState<string | null>(null);
 
   const [solveType, setSolveType] = useState("astar");
   const [isSolving, setIsSolving] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [mazeId, setMazeId] = useState(""); // Default empty for placeholder
+  const [mazeId, setMazeId] = useState("");
 
   const [startPoint, setStartPoint] = useState<[number, number]>([0, 0]);
   const [endPoint, setEndPoint] = useState<[number, number]>([0, 0]);
@@ -77,7 +77,7 @@ export default function Solve() {
   const handleLoadID = async () => {
     if (!mazeId) return;
     setIsSolving(true);
-    setError(null); // Clear previous errors
+    setError(null);
     try {
       const data = await getMazeById(mazeId);
       setActiveMaze(data);

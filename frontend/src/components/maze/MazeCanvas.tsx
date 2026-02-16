@@ -81,7 +81,6 @@ export default function MazeCanvas({
 
           setVisibleSolutionStep((prevS) => {
             const nextS = Math.min(prevS + stepSize, solutionPath.length);
-            // Completion check is now done in the next tick via logic below
             return nextS;
           });
 
@@ -97,7 +96,7 @@ export default function MazeCanvas({
         onComplete
       ) {
         onComplete();
-        return; // Stop the animation loop
+        return; // Stop animation loop
       }
 
       frame = requestAnimationFrame(animate);
@@ -150,7 +149,7 @@ export default function MazeCanvas({
     const sPoint = overrideStart || maze.start;
     const ePoint = overrideEnd || maze.end;
 
-    ctx.fillStyle = "rgba(167, 139, 250, 0.4)";
+    ctx.fillStyle = "rgba(113, 113, 122, 0.4)";
     ctx.fill(highlightPath);
 
     if (visibleHighlights >= highlights.length && solutionPath.length > 0) {

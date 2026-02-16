@@ -146,3 +146,24 @@ func HandleGetMaze(w http.ResponseWriter, r *http.Request) {
 		"start": [2]int{m.StartRow, m.StartCol}, "end": [2]int{m.EndRow, m.EndCol},
 	})
 }
+
+func HandleUpdateThumbnail(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodPut {
+        http.Error(w, "Method not allowed", 405)
+        return
+    }
+
+    var payload struct {
+        ID        string `json:"id"`
+        Thumbnail string `json:"thumbnail"`
+    }
+    json.NewDecoder(r.Body).Decode(&payload)
+
+    result := db.DB.Model(&models.Maze{}).Where("id = ?", payload.ID).Update("thumbnail", payload.Thumbnail)
+    
+    if result.Error != nil {
+        http.Error(w, "DB_UPDATE_FAILED", 500)
+        return
+    }
+    w.WriteHeader(http.StatusOK)
+}
