@@ -7,6 +7,7 @@ interface SolveControlsProps {
   mazeId: string;
   setMazeId: (id: string) => void;
   handleLoadLast: () => void;
+  handleLoadID: () => void;
   startPoint: [number, number];
   setStartPoint: (p: [number, number]) => void;
   endPoint: [number, number];
@@ -25,6 +26,7 @@ export default function SolveControls({
   mazeId,
   setMazeId,
   handleLoadLast,
+  handleLoadID,
   startPoint,
   setStartPoint,
   endPoint,
@@ -41,7 +43,10 @@ export default function SolveControls({
   return (
     <form
       className="grid grid-cols-12 gap-4 items-end"
-      onSubmit={(e) => e.preventDefault()}
+      onSubmit={(e) => {
+        e.preventDefault();
+        handleLoadID();
+      }}
     >
       <div className="col-span-3 space-y-2">
         <label className="block font-bold uppercase tracking-widest text-[9px]">
@@ -57,10 +62,18 @@ export default function SolveControls({
           />
           <button
             type="button"
-            onClick={handleLoadLast}
+            onClick={handleLoadID}
             className="px-3 bg-white hover:bg-black hover:text-white transition-colors text-[9px] font-black uppercase cursor-pointer shrink-0"
           >
-            LOAD_LAST
+            LOAD
+          </button>
+          <button
+            type="button"
+            onClick={handleLoadLast}
+            className="px-3 bg-zinc-100 hover:bg-black hover:text-white transition-colors text-[9px] font-black uppercase cursor-pointer shrink-0 border-l-2 border-black"
+            title="Load last generated maze"
+          >
+            LAST
           </button>
         </div>
       </div>

@@ -2,15 +2,28 @@ package main
 
 import (
 	"encoding/json"
+	"log"
+	"math/rand"
 	"net/http"
 	"strconv"
 
-	"github.com/IZO-Ong/gridgo/maze"
+	"github.com/IZO-Ong/gridgo/internal/db"
+	"github.com/IZO-Ong/gridgo/internal/maze"
+	"github.com/IZO-Ong/gridgo/internal/models"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	err := godotenv.Load()
+    if err != nil {
+      log.Println("Warning: .env file not found, using system environment variables")
+    }
+
+	db.InitDB()
+
 	mux := http.NewServeMux()
-	
+
+	mux.HandleFunc("/api/maze/get", handleGetMaze)
 	mux.HandleFunc("/api/maze/generate", handleGenerateMaze)
 	mux.HandleFunc("/api/maze/render", handleRenderMaze)
 	mux.HandleFunc("/api/maze/solve", handleSolveMaze)
@@ -90,10 +103,29 @@ func handleGenerateMaze(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// return as JSON
-	myMaze.SetRandomStartEnd()
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(myMaze)
+    myMaze.SetRandomStartEnd()
+
+    gridBytes, _ := json.Marshal(myMaze.Grid)
+
+    dbMaze := models.Maze{
+        ID:        "G-" + strconv.Itoa(rand.Intn(9000)+1000) + "-X",
+        GridJSON:  string(gridBytes),
+        Rows:      rows,
+        Cols:      cols,
+        StartRow:  myMaze.Start[0],
+        StartCol:  myMaze.Start[1],
+        EndRow:    myMaze.End[0],
+        EndCol:    myMaze.End[1],
+    }
+
+    result := db.DB.Create(&dbMaze)
+    if result.Error != nil {
+        http.Error(w, "Failed to save to database", http.StatusInternalServerError)
+        return
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(myMaze)
 }
 
 func handleRenderMaze(w http.ResponseWriter, r *http.Request) {
@@ -147,4 +179,39 @@ func handleSolveMaze(w http.ResponseWriter, r *http.Request) {
 		"visited": visited,
 		"path":    path,
 	})
+}
+
+func handleGetMaze(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodGet {
+        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+        return
+    }
+
+    mazeID := r.URL.Query().Get("id")
+    if mazeID == "" {
+        http.Error(w, "Maze ID required", http.StatusBadRequest)
+        return
+    }
+
+    var m models.Maze
+    result := db.DB.First(&m, "id = ?", mazeID)
+    if result.Error != nil {
+        http.Error(w, "Maze not found", http.StatusNotFound)
+        return
+    }
+
+    var grid [][]maze.Cell
+    json.Unmarshal([]byte(m.GridJSON), &grid)
+
+    response := map[string]interface{}{
+        "id":    m.ID,
+        "rows":  m.Rows,
+        "cols":  m.Cols,
+        "grid":  grid,
+        "start": [2]int{m.StartRow, m.StartCol},
+        "end":   [2]int{m.EndRow, m.EndCol},
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(response)
 }

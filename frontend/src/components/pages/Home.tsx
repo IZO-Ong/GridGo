@@ -27,7 +27,6 @@ export default function Home() {
   const { dims, updateDim, clampDimensions, handleImageChange } =
     useImageDimensions();
 
-  // 1. Load Session & Preferences
   useEffect(() => {
     const init = async () => {
       const savedMaze = await loadGenerateSession();
@@ -75,7 +74,6 @@ export default function Home() {
 
     const formData = new FormData(e.currentTarget);
 
-    // FIX: Explicitly set the algorithm type so the backend receives it
     formData.set("type", genType);
 
     if (genType === "image" && selectedFile) {

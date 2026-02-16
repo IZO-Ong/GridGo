@@ -48,3 +48,9 @@ export async function solveMaze(mazeData: any, algorithm: string) {
 
   return response.json();
 }
+
+export async function getMazeById(id: string) {
+  const response = await fetch(`${BASE_URL}/get?id=${id}`);
+  if (!response.ok) throw new Error("MAZE_NOT_FOUND");
+  return response.json();
+}

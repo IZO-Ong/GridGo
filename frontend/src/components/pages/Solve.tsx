@@ -9,7 +9,7 @@ import {
 } from "@/lib/db";
 import MazeCanvas from "@/components/maze/MazeCanvas";
 import SolveControls from "@/components/maze/SolveControls";
-import { solveMaze } from "@/lib/api";
+import { solveMaze, getMazeById } from "@/lib/api";
 import { MazeData } from "@/hooks/useMazeGeneration";
 
 const SOLVE_ALGORITHMS = [
@@ -34,7 +34,6 @@ export default function Solve() {
     path: [number, number][];
   } | null>(null);
 
-  // 1. Initial Load: Restore solve session and preferences
   useEffect(() => {
     const init = async () => {
       const savedMaze = await loadSolveSession();
@@ -54,7 +53,6 @@ export default function Solve() {
     init();
   }, []);
 
-  // 2. Real-time Save: Fire whenever settings change
   useEffect(() => {
     if (hasLoaded) {
       savePreferences("solve_prefs", {
@@ -75,6 +73,28 @@ export default function Solve() {
   const handleAnimationComplete = useCallback(() => {
     setIsAnimating(false);
   }, []);
+
+  const handleLoadID = async () => {
+    if (!mazeId) return;
+
+    setIsSolving(true);
+    try {
+      const data = await getMazeById(mazeId);
+
+      setActiveMaze(data);
+      setStartPoint(data.start);
+      setEndPoint(data.end);
+      setSolution(null);
+      setIsAnimating(false);
+
+      await saveSolveSession(data);
+    } catch (err) {
+      console.error("CLOUD_FETCH_ERROR:", err);
+      alert(`COULD NOT FIND REFERENCE: ${mazeId}. Ensure the ID is valid.`);
+    } finally {
+      setIsSolving(false);
+    }
+  };
 
   const handleAction = async () => {
     if (isAnimating) {
@@ -123,6 +143,7 @@ export default function Solve() {
         mazeId={mazeId}
         setMazeId={setMazeId}
         handleLoadLast={handleLoadLast}
+        handleLoadID={handleLoadID}
         startPoint={startPoint}
         setStartPoint={setStartPoint}
         endPoint={endPoint}
