@@ -26,8 +26,15 @@ export function useMazeGeneration() {
   ): Promise<MazeData | null> => {
     setLoading(true);
     setError(null);
+
+    // Retrieve the token from storage
+    const token =
+      typeof window !== "undefined"
+        ? localStorage.getItem("gridgo_token")
+        : null;
+
     try {
-      const data = await generateMaze(formData);
+      const data = await generateMaze(formData, token);
       setMaze(data);
       return data;
     } catch (err: any) {

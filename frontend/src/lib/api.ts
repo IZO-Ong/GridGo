@@ -1,19 +1,17 @@
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
-export async function generateMaze(formData: FormData) {
-  const response = await fetch(`${BASE_URL}/maze/generate`, {
+export async function generateMaze(formData: FormData, token?: string | null) {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/maze/generate`, {
     method: "POST",
     body: formData,
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || "SYSTEM_GENERATION_FAILURE");
-  }
-
-  return response.json();
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
 }
-
 export async function renderMazeImage(mazeData: any) {
   const response = await fetch(`${BASE_URL}/maze/render`, {
     method: "POST",

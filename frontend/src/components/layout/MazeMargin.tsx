@@ -50,14 +50,13 @@ export default function MazeMargin({ side }: { side: "left" | "right" }) {
       const marginWidth = 70;
       const cols = 7;
       const cellSize = marginWidth / cols;
-      const BUFFER_ROWS = 3; // Added extra rows to ensure full coverage
+      const BUFFER_ROWS = 3;
 
       const content = document.getElementById("main-content-wrapper");
       const pageHeight = content
         ? Math.max(content.offsetHeight, window.innerHeight)
         : window.innerHeight;
 
-      // Calculate rows and add the buffer
       const rows = Math.ceil(pageHeight / cellSize) + BUFFER_ROWS;
       const fixedHeight = rows * cellSize;
 

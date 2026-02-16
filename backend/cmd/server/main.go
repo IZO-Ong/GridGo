@@ -146,6 +146,8 @@ func handleGenerateMaze(w http.ResponseWriter, r *http.Request) {
         return
     }
 
+    userID := getUserIDFromRequest(r)
+
     myMaze.SyncGridToWeights(originalWeights)
 
     myMaze.SetRandomStartEnd()
@@ -166,6 +168,10 @@ func handleGenerateMaze(w http.ResponseWriter, r *http.Request) {
         EndCol:       myMaze.End[1],
         DeadEnds:     stats.DeadEnds,
         Complexity:   stats.Complexity,
+    }
+
+    if userID != "" {
+        dbMaze.CreatorID = &userID
     }
 
     myMaze.ID = mazeID
@@ -453,4 +459,27 @@ func handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 
     url := fmt.Sprintf("%s/auth-callback?token=%s&username=%s", frontendURL, tokenString, dbUser.Username)
     http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+}
+
+func getUserIDFromRequest(r *http.Request) string {
+	authHeader := r.Header.Get("Authorization")
+	if len(authHeader) < 8 {
+		return ""
+	}
+
+	tokenString := authHeader[7:]
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		return getJWTKey(), nil
+	})
+
+	if err != nil || !token.Valid {
+		return ""
+	}
+
+	if claims, ok := token.Claims.(jwt.MapClaims); ok {
+		if id, exists := claims["user_id"]; exists {
+			return id.(string)
+		}
+	}
+	return ""
 }
