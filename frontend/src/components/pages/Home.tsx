@@ -87,26 +87,63 @@ export default function Home() {
       await saveGenerateSession(newMaze);
 
       setTimeout(async () => {
-        const canvas = document.querySelector("canvas");
+        const canvas = document.getElementById(
+          "main-maze-canvas"
+        ) as HTMLCanvasElement;
         if (canvas) {
-          const b64 = canvas.toDataURL("image/webp", 0.5);
+          const tempCanvas = document.createElement("canvas");
+          const tempCtx = tempCanvas.getContext("2d");
 
-          try {
-            await fetch(`${BASE_URL}/maze/thumbnail`, {
-              method: "PUT",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${localStorage.getItem("gridgo_token")}`,
-              },
-              body: JSON.stringify({ id: newMaze.id, thumbnail: b64 }),
-            });
-          } catch (err) {
-            console.error("THUMBNAIL_SYNC_FAILURE", err);
+          tempCanvas.width = 400;
+          tempCanvas.height = 225;
+
+          if (tempCtx) {
+            tempCtx.fillStyle = "white";
+            tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+
+            const sourceWidth = canvas.width;
+            const sourceHeight = canvas.height;
+
+            const scale = Math.max(
+              tempCanvas.width / sourceWidth,
+              tempCanvas.height / sourceHeight
+            );
+
+            const xOffset = (tempCanvas.width - sourceWidth * scale) / 2;
+            const yOffset = (tempCanvas.height - sourceHeight * scale) / 2;
+
+            tempCtx.drawImage(
+              canvas,
+              0,
+              0,
+              sourceWidth,
+              sourceHeight,
+              xOffset,
+              yOffset,
+              sourceWidth * scale,
+              sourceHeight * scale
+            );
+
+            const b64 = tempCanvas.toDataURL("image/webp", 0.6);
+
+            try {
+              await fetch(`${BASE_URL}/maze/thumbnail`, {
+                method: "PUT",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${localStorage.getItem("gridgo_token")}`,
+                },
+                body: JSON.stringify({ id: newMaze.id, thumbnail: b64 }),
+              });
+            } catch (err) {
+              console.error("THUMBNAIL_SYNC_FAILURE", err);
+            }
           }
         }
       }, 200);
     }
   };
+
   return (
     <div className="space-y-8">
       <GenerateControls

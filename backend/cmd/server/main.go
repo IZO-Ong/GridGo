@@ -30,6 +30,7 @@ func main() {
     // Maze Routes
 	mux.HandleFunc("/api/maze/generate", middleware.OptionalAuth(handlers.HandleGenerateMaze))
 	mux.HandleFunc("/api/maze/get", handlers.HandleGetMaze)
+	mux.HandleFunc("/api/maze/delete", middleware.OptionalAuth(handlers.HandleDeleteMaze))
 	mux.HandleFunc("/api/maze/solve", handlers.HandleSolveMaze)
 	mux.HandleFunc("/api/maze/render", handlers.HandleRenderMaze)
 	mux.HandleFunc("/api/maze/thumbnail", handlers.HandleUpdateThumbnail)

@@ -249,7 +249,11 @@ export default function MazeCanvas({
             willChange: "transform",
           }}
         >
-          <canvas ref={canvasRef} className="block select-none" />
+          <canvas
+            id="main-maze-canvas"
+            ref={canvasRef}
+            className="block select-none"
+          />
         </div>
       </div>
 

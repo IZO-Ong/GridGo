@@ -42,7 +42,7 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": user.ID,
-		"exp":     time.Now().Add(time.Hour * 72).Unix(),
+		"exp":     time.Now().Add(time.Hour * 12).Unix(),
 	})
 	tokenString, _ := token.SignedString(middleware.GetJWTKey())
 	json.NewEncoder(w).Encode(map[string]string{"token": tokenString, "username": user.Username})

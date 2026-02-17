@@ -147,6 +147,21 @@ func HandleGetMaze(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func HandleDeleteMaze(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodDelete { return }
+    
+    mazeID := r.URL.Query().Get("id")
+    userID := middleware.GetUserID(r)
+
+    result := db.DB.Where("id = ? AND creator_id = ?", mazeID, userID).Delete(&models.Maze{})
+    
+    if result.RowsAffected == 0 {
+        http.Error(w, "UNAUTHORIZED_OR_NOT_FOUND", 403)
+        return
+    }
+    w.WriteHeader(http.StatusOK)
+}
+
 func HandleUpdateThumbnail(w http.ResponseWriter, r *http.Request) {
     if r.Method != http.MethodPut {
         http.Error(w, "Method not allowed", 405)

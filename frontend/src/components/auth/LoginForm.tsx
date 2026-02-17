@@ -11,7 +11,7 @@ export default function LoginForm({ onSubmit, loading }: LoginFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({ username: formData.identifier, password: formData.password }); // Mapping identifier to 'username' for backend
+    onSubmit({ username: formData.identifier, password: formData.password });
   };
 
   return (
