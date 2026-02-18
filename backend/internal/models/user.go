@@ -5,12 +5,15 @@ import (
 )
 
 type User struct {
-    ID           string    `gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
-    Username     string    `gorm:"uniqueIndex;not null"`
-    Email        string    `gorm:"uniqueIndex;not null"`
-    PasswordHash string    `gorm:"not null"`
-    CreatedAt    time.Time
-    Mazes        []Maze    `gorm:"foreignKey:CreatorID"`
+    ID           string    `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+    Username     string    `gorm:"uniqueIndex;not null" json:"username"`
+    Email        string    `gorm:"uniqueIndex;not null" json:"email"`
+    PasswordHash string    `gorm:"not null" json:"-"`
+    CreatedAt    time.Time `json:"created_at"`
+    Mazes        []Maze    `gorm:"foreignKey:CreatorID" json:"mazes"`
+    Posts        []Post    `gorm:"foreignKey:CreatorID" json:"posts"`
+    Comments     []Comment `gorm:"foreignKey:CreatorID" json:"comments"`
+    Votes        []Vote    `gorm:"foreignKey:UserID" json:"votes"`
 }
 
 type PendingUser struct {

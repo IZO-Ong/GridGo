@@ -7,8 +7,11 @@ import LoginForm from "@/components/auth/LoginForm";
 import RegisterForm from "@/components/auth/RegisterForm";
 import VerifyForm from "@/components/auth/VerifyForm";
 import OAuthButton from "@/components/auth/OAuthButton";
-
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+import {
+  login as apiLogin,
+  register as apiRegister,
+  verifyAccount,
+} from "@/lib/api";
 
 export default function AuthPage() {
   const { login } = useAuth();
@@ -25,52 +28,20 @@ export default function AuthPage() {
   const handleAuthSubmit = async (payload: any) => {
     setError(null);
     setLoading(true);
-
     try {
       if (view === "login") {
-        // Payload: { username, password }
-        const res = await fetch(`${BASE_URL}/login`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.error || "Invalid credentials");
-        }
-
-        const data = await res.json();
+        const data = await apiLogin(payload);
         login(data.token, data.username);
         router.push("/");
       } else if (view === "register") {
         setFormData({ email: payload.email });
-
-        const res = await fetch(`${BASE_URL}/register`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.error || "Registration failed");
-        }
-
+        await apiRegister(payload);
         setView("verify");
-        setError("SUCCESS: Verification code sent to email.");
+        setError("SUCCESS: Code sent to email.");
       } else if (view === "verify") {
-        // Payload: string (the 6-digit OTP code)
-        const res = await fetch(`${BASE_URL}/verify`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: formData.email, code: payload }),
-        });
-
-        if (!res.ok) throw new Error("Invalid or expired code");
-
+        await verifyAccount(formData.email, payload);
         setView("login");
-        setError("SUCCESS: Account verified. Please login.");
+        setError("SUCCESS: Verified. Please login.");
       }
     } catch (err: any) {
       setError(err.message);

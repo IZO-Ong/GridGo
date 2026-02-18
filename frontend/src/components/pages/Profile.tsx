@@ -4,8 +4,7 @@ import { useParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import MazeRepositoryCard from "@/components/profile/MazeRepositoryCard";
-
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+import { getProfile, deleteMaze as apiDeleteMaze } from "@/lib/api";
 
 export default function ProfilePage() {
   const { username } = useParams();
@@ -14,8 +13,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${BASE_URL}/profile?username=${username}`)
-      .then((res) => res.json())
+    getProfile(username as string)
       .then((data) => {
         setProfile(data);
         setLoading(false);
@@ -25,28 +23,15 @@ export default function ProfilePage() {
 
   const handleDelete = async (e: React.MouseEvent, mazeId: string) => {
     e.preventDefault();
-    if (!confirm(`DANGER: Purge Matrix ${mazeId} from database?`)) return;
+    if (!confirm(`Warning: Purge Maze ${mazeId}?`)) return;
 
-    try {
-      const res = await fetch(`${BASE_URL}/maze/delete?id=${mazeId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("gridgo_token")}`,
-        },
+    const success = await apiDeleteMaze(mazeId);
+    if (success) {
+      setProfile({
+        ...profile,
+        mazes: profile.mazes.filter((m: any) => m.id !== mazeId),
+        stats: { ...profile.stats, total_mazes: profile.stats.total_mazes - 1 },
       });
-
-      if (res.ok) {
-        setProfile({
-          ...profile,
-          mazes: profile.mazes.filter((m: any) => m.id !== mazeId),
-          stats: {
-            ...profile.stats,
-            total_mazes: profile.stats.total_mazes - 1,
-          },
-        });
-      }
-    } catch (err) {
-      console.error("PURGE_SEQUENCE_FAILED", err);
     }
   };
 

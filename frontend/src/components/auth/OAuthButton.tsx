@@ -3,7 +3,7 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export default function OAuthButton() {
   const handleOAuth = () => {
-    window.location.href = `${BASE_URL}/auth/google`;
+    window.location.href = `${BASE_URL}/api/auth/google`;
   };
 
   return (
@@ -18,7 +18,7 @@ export default function OAuthButton() {
 
       <button
         onClick={handleOAuth}
-        className="w-full border-2 border-black py-2 font-black uppercase text-[11px] flex items-center justify-center gap-3 hover:bg-black hover:text-white transition-all active:translate-y-0.5 group"
+        className="w-full border-2 border-black py-2 font-black uppercase text-[11px] flex items-center justify-center gap-3 hover:bg-black hover:text-white transition-all active:translate-y-0.5 group cursor-pointer"
       >
         <svg
           width="18"

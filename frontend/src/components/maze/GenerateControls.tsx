@@ -1,7 +1,7 @@
 "use client";
 import { useState, useRef } from "react";
-import AlgorithmSelect from "@/components/ui/AlgorithmSelect";
-import GridDimensionsInput from "@/components/ui/GridDimensionsInput";
+import AlgorithmSelect from "@/components/maze/AlgorithmSelect";
+import GridDimensionsInput from "@/components/maze/GridDimensionsInput";
 
 interface GenerateControlsProps {
   genType: string;

@@ -11,6 +11,7 @@ import (
 	"github.com/IZO-Ong/gridgo/internal/db"
 	"github.com/IZO-Ong/gridgo/internal/middleware"
 	"github.com/IZO-Ong/gridgo/internal/models"
+	"github.com/google/uuid"
 )
 
 // HandleCreatePost handles new forum threads
@@ -27,7 +28,7 @@ func HandleCreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	p.ID = fmt.Sprintf("P-%d", rand.Intn(1000000))
+	p.ID = "P-" + uuid.New().String()[:8]
 	p.CreatorID = userID
 	p.CreatedAt = time.Now()
 
@@ -40,11 +41,32 @@ func HandleCreatePost(w http.ResponseWriter, r *http.Request) {
 
 // HandleGetPosts supports infinite scroll via offset
 func HandleGetPosts(w http.ResponseWriter, r *http.Request) {
-	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
-	var posts []models.Post
+    offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
+    userID := middleware.GetUserID(r)
+    
+    var posts []models.Post
+    db.DB.Preload("Creator").Preload("Maze").Order("created_at desc").Limit(10).Offset(offset).Find(&posts)
 
-	db.DB.Preload("Creator").Order("created_at desc").Limit(10).Offset(offset).Find(&posts)
-	json.NewEncoder(w).Encode(posts)
+    if userID != "" {
+        var postIDs []string
+        for _, p := range posts {
+            postIDs = append(postIDs, p.ID) 
+        }
+
+        var votes []models.Vote
+        db.DB.Where("user_id = ? AND target_id IN ?", userID, postIDs).Find(&votes)
+
+        voteMap := make(map[string]int)
+        for _, v := range votes {
+            voteMap[v.TargetID] = v.Value
+        }
+
+        for i := range posts {
+            posts[i].UserVote = voteMap[posts[i].ID]
+        }
+    }
+
+    json.NewEncoder(w).Encode(posts)
 }
 
 // HandleGetPostByID fetches a post and its flattened comments
@@ -52,7 +74,6 @@ func HandleGetPostByID(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	var post models.Post
 
-	// Preload Creator for the post and all associated comments
 	err := db.DB.Preload("Creator").Preload("Comments.Creator").Where("id = ?", id).First(&post).Error
 	if err != nil {
 		http.Error(w, "POST_NOT_FOUND", 404)

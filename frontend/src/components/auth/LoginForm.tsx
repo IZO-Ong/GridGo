@@ -49,7 +49,7 @@ export default function LoginForm({ onSubmit, loading }: LoginFormProps) {
       <button
         type="submit"
         disabled={loading}
-        className="w-full bg-black text-white py-3 font-black uppercase italic hover:bg-zinc-800 transition-all active:translate-y-1 text-sm border-2 border-black disabled:opacity-50 mt-4"
+        className="w-full bg-black text-white py-3 font-black uppercase italic hover:bg-zinc-800 transition-all active:translate-y-1 text-sm border-2 border-black disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer mt-4"
       >
         {loading ? "Processing..." : "Login"}
       </button>

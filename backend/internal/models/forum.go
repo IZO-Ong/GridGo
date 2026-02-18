@@ -5,15 +5,17 @@ import (
 )
 
 type Post struct {
-	ID        string    `gorm:"primaryKey" json:"id"`
-	Title     string    `json:"title"`
-	Content   string    `json:"content"`
-	MazeID    *string   `json:"maze_id"`
-	CreatorID string    `json:"creator_id"`
-	Creator   User      `gorm:"foreignKey:CreatorID" json:"creator"`
-	Upvotes   int       `gorm:"default:0" json:"upvotes"`
-	Comments  []Comment `json:"comments"`
-	CreatedAt time.Time `json:"created_at"`
+    ID        string    `gorm:"primaryKey" json:"id"`
+    Title     string    `json:"title"`
+    Content   string    `json:"content"`
+    MazeID    string    `json:"maze_id"`
+    Maze      Maze      `gorm:"foreignKey:MazeID" json:"maze"`
+    CreatorID string    `json:"creator_id"`
+    Creator   User      `gorm:"foreignKey:CreatorID" json:"creator"`
+    Upvotes   int       `gorm:"default:0" json:"upvotes"`
+    UserVote  int       `gorm:"-" json:"user_vote"`
+    Comments  []Comment `json:"comments"`
+    CreatedAt time.Time `json:"created_at"`
 }
 
 type Comment struct {

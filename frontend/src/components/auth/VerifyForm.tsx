@@ -36,7 +36,7 @@ export default function VerifyForm({
       <button
         type="submit"
         disabled={loading}
-        className="w-full bg-black text-white py-3 font-black uppercase italic hover:bg-zinc-800 border-2 border-black"
+        className="w-full bg-black text-white py-3 font-black uppercase italic hover:bg-zinc-800 border-2 border-black disabled:cursor-not-allowed cursor-pointer"
       >
         {loading ? "Verifying..." : "Verify Identity"}
       </button>

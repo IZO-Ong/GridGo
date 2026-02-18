@@ -6,6 +6,7 @@ import {
   savePreferences,
   loadPreferences,
 } from "@/lib/db";
+import { updateThumbnail } from "@/lib/api";
 import MazeCanvas from "@/components/maze/MazeCanvas";
 import GenerateControls from "@/components/maze/GenerateControls";
 import { useImageDimensions } from "@/hooks/useImageDimensions";
@@ -73,12 +74,10 @@ export default function Home() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     clampDimensions();
-
     const formData = new FormData(e.currentTarget);
     formData.set("type", genType);
-    if (genType === "image" && selectedFile) {
+    if (genType === "image" && selectedFile)
       formData.set("image", selectedFile);
-    }
 
     const newMaze = await executeGeneration(formData);
 
@@ -93,7 +92,6 @@ export default function Home() {
         if (canvas) {
           const tempCanvas = document.createElement("canvas");
           const tempCtx = tempCanvas.getContext("2d");
-
           tempCanvas.width = 400;
           tempCanvas.height = 225;
 
@@ -102,45 +100,31 @@ export default function Home() {
             tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
 
             const PADDING = 800;
-
-            const mazeInternalWidth = canvas.width - PADDING * 2;
-            const mazeInternalHeight = canvas.height - PADDING * 2;
-
+            const mazeW = canvas.width - PADDING * 2;
+            const mazeH = canvas.height - PADDING * 2;
             const scale = Math.max(
-              tempCanvas.width / mazeInternalWidth,
-              tempCanvas.height / mazeInternalHeight
+              tempCanvas.width / mazeW,
+              tempCanvas.height / mazeH
             );
-
-            const xOffset = (tempCanvas.width - mazeInternalWidth * scale) / 2;
-            const yOffset =
-              (tempCanvas.height - mazeInternalHeight * scale) / 2;
+            const xOff = (tempCanvas.width - mazeW * scale) / 2;
+            const yOff = (tempCanvas.height - mazeH * scale) / 2;
 
             tempCtx.drawImage(
               canvas,
               PADDING,
               PADDING,
-              mazeInternalWidth,
-              mazeInternalHeight,
-              xOffset,
-              yOffset,
-              mazeInternalWidth * scale,
-              mazeInternalHeight * scale
+              mazeW,
+              mazeH,
+              xOff,
+              yOff,
+              mazeW * scale,
+              mazeH * scale
             );
-
             const b64 = tempCanvas.toDataURL("image/webp", 0.6);
 
-            try {
-              await fetch(`${BASE_URL}/maze/thumbnail`, {
-                method: "PUT",
-                headers: {
-                  "Content-Type": "application/json",
-                  Authorization: `Bearer ${localStorage.getItem("gridgo_token")}`,
-                },
-                body: JSON.stringify({ id: newMaze.id, thumbnail: b64 }),
-              });
-            } catch (err) {
-              console.error("THUMBNAIL_SYNC_FAILURE", err);
-            }
+            await updateThumbnail(newMaze.id, b64).catch((err) =>
+              console.error("THUMBNAIL_SYNC_FAILURE", err)
+            );
           }
         }
       }, 400);

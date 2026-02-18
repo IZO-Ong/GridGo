@@ -147,6 +147,19 @@ func HandleGetMaze(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func HandleGetMyMazes(w http.ResponseWriter, r *http.Request) {
+    userID := middleware.GetUserID(r)
+    if userID == "" {
+        http.Error(w, "AUTH_REQUIRED", 401)
+        return
+    }
+
+    var mazes []models.Maze
+    db.DB.Where("creator_id = ?", userID).Order("created_at desc").Find(&mazes)
+    
+    json.NewEncoder(w).Encode(mazes)
+}
+
 func HandleDeleteMaze(w http.ResponseWriter, r *http.Request) {
     if r.Method != http.MethodDelete { return }
     
