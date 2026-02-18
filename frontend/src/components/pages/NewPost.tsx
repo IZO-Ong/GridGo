@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { loadGenerateSession } from "@/lib/db";
 import { useAuth } from "@/context/AuthContext";
-import { getMyMazes, createPost } from "@/lib/api"; // Integrated lib/api
+import { getMyMazes, createPost } from "@/lib/api";
 
 export default function NewPost() {
   const { user } = useAuth();

@@ -3,21 +3,22 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { castVote } from "@/lib/api";
+import { Post } from "@/types";
 import Link from "next/link";
+import VoteSidebar from "./VoteSidebar";
 
-export default function ForumCard({ post }: { post: any }) {
+export default function ForumCard({ post }: { post: Post }) {
   const { user } = useAuth();
   const router = useRouter();
-  const [currentVote, setCurrentVote] = useState<number>(post.user_vote || 0);
-  const [voteCount, setVoteCount] = useState<number>(post.upvotes || 0);
+  const [currentVote, setCurrentVote] = useState(post.user_vote ?? 0);
+  const [voteCount, setVoteCount] = useState(post.upvotes);
 
   useEffect(() => {
-    setCurrentVote(post.user_vote || 0);
-    setVoteCount(post.upvotes || 0);
+    setCurrentVote(post.user_vote ?? 0);
+    setVoteCount(post.upvotes);
   }, [post.user_vote, post.upvotes]);
 
-  const handleVote = async (e: React.MouseEvent, val: number) => {
-    e.stopPropagation();
+  const handleVote = async (val: number) => {
     if (!user) return alert("Log in to vote!");
     const newValue = currentVote === val ? 0 : val;
     const diff = newValue - currentVote;
@@ -25,15 +26,10 @@ export default function ForumCard({ post }: { post: any }) {
     setVoteCount((prev) => prev + diff);
     setCurrentVote(newValue);
 
-    try {
-      const success = await castVote(post.id, "post", newValue);
-      if (!success) {
-        setVoteCount((prev) => prev - diff);
-        setCurrentVote(currentVote);
-      }
-    } catch (err) {
-      setVoteCount((prev) => prev - diff);
-      setCurrentVote(currentVote);
+    const success = await castVote(post.id, "post", newValue);
+    if (!success) {
+      setVoteCount(post.upvotes);
+      setCurrentVote(post.user_vote ?? 0);
     }
   };
 
@@ -42,52 +38,15 @@ export default function ForumCard({ post }: { post: any }) {
       onClick={() => router.push(`/forum/post/${post.id}`)}
       className="flex h-48 border-4 border-black bg-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all group cursor-pointer overflow-hidden"
     >
-      {/* 1. Voting Sidebar */}
-      <div className="w-12 bg-zinc-50 border-r-4 border-black flex flex-col items-center py-4 gap-1 shrink-0 cursor-default">
-        <button
-          onClick={(e) => handleVote(e, 1)}
-          className={`transition-all cursor-pointer p-1 rounded hover:bg-zinc-200 ${
-            currentVote === 1
-              ? "text-black scale-110"
-              : "text-black opacity-20 hover:opacity-100"
-          }`}
-        >
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill={currentVote === 1 ? "black" : "none"}
-            stroke="black"
-            strokeWidth="4"
-          >
-            <path d="M18 15l-6-6-6 6" />
-          </svg>
-        </button>
-        <span className="font-black text-sm italic text-black select-none">
-          {voteCount}
-        </span>
-        <button
-          onClick={(e) => handleVote(e, -1)}
-          className={`transition-all cursor-pointer p-1 rounded hover:bg-zinc-200 ${
-            currentVote === -1
-              ? "text-black scale-110"
-              : "text-black opacity-20 hover:opacity-100"
-          }`}
-        >
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill={currentVote === -1 ? "black" : "none"}
-            stroke="black"
-            strokeWidth="4"
-          >
-            <path d="M6 9l6 6 6-6" />
-          </svg>
-        </button>
+      <div onClick={(e) => e.stopPropagation()}>
+        <VoteSidebar
+          upvotes={voteCount}
+          userVote={currentVote}
+          onVote={handleVote}
+          small
+        />
       </div>
 
-      {/* 2. Main Content Wrapper */}
       <div className="flex-1 flex items-center p-5 gap-6 overflow-hidden">
         <div className="flex-1 flex flex-col justify-between h-full overflow-hidden">
           <div className="space-y-2">

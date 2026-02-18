@@ -10,9 +10,8 @@ import { updateThumbnail } from "@/lib/api";
 import MazeCanvas from "@/components/maze/MazeCanvas";
 import GenerateControls from "@/components/maze/GenerateControls";
 import { useImageDimensions } from "@/hooks/useImageDimensions";
-import { useMazeGeneration, MazeData } from "@/hooks/useMazeGeneration";
-
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+import { useMazeGeneration } from "@/hooks/useMazeGeneration";
+import { MazeData } from "@/types";
 
 const ALGORITHMS = [
   { id: "image", label: "IMAGE_KRUSKAL" },
@@ -37,7 +36,6 @@ export default function Home() {
 
       const prefs = await loadPreferences("gen_prefs");
       if (prefs) {
-        // Validate type against available algorithms
         if (ALGORITHMS.some((a) => a.id === prefs.genType)) {
           setGenType(prefs.genType);
         }
@@ -49,7 +47,6 @@ export default function Home() {
     init();
   }, [updateDim]);
 
-  // 2. Real-time Auto-save
   useEffect(() => {
     if (hasLoaded) {
       savePreferences("gen_prefs", { genType, dims });

@@ -33,3 +33,17 @@ export interface Post {
   comments: Comment[];
   created_at: string;
 }
+
+export interface MazeData {
+  id: string;
+  rows: number;
+  cols: number;
+  start: [number, number];
+  end: [number, number];
+  grid: Array<
+    Array<{
+      walls: [boolean, boolean, boolean, boolean];
+      wall_weights: [number, number, number, number];
+    }>
+  >;
+}

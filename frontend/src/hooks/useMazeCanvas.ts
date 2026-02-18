@@ -1,6 +1,6 @@
 "use client";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { MazeData } from "@/hooks/useMazeGeneration";
+import { MazeData } from "@/types";
 
 export function useMazeCanvas(maze: MazeData | null) {
   const containerRef = useRef<HTMLDivElement>(null);

@@ -10,7 +10,7 @@ import {
 import MazeCanvas from "@/components/maze/MazeCanvas";
 import SolveControls from "@/components/maze/SolveControls";
 import { solveMaze, getMazeById } from "@/lib/api";
-import { MazeData } from "@/hooks/useMazeGeneration";
+import { MazeData } from "@/types";
 
 const SOLVE_ALGORITHMS = [
   { id: "astar", label: "A*_SEARCH" },

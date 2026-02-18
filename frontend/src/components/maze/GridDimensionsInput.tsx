@@ -6,8 +6,8 @@ interface GridDimensionsInputProps {
   labelOverride?: { row: string; col: string };
   onUpdate: (dim: "rows" | "cols", val: number) => void;
   onBlur?: () => void;
-  min?: number; // Added for clamping
-  max?: { rows: number; cols: number }; // Added for clamping
+  min?: number;
+  max?: { rows: number; cols: number };
 }
 
 export default function GridDimensionsInput({

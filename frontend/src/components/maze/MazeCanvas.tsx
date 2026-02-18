@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, useMemo } from "react";
-import { MazeData } from "@/hooks/useMazeGeneration";
+import { MazeData } from "@/types";
 import { useMazeCanvas } from "@/hooks/useMazeCanvas";
 import { renderMazeImage } from "@/lib/api";
 

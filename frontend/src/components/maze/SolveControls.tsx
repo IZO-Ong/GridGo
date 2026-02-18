@@ -1,7 +1,7 @@
 "use client";
 import AlgorithmSelect from "@/components/maze/AlgorithmSelect";
 import GridDimensionsInput from "@/components/maze/GridDimensionsInput";
-import { MazeData } from "@/hooks/useMazeGeneration";
+import { MazeData } from "@/types";
 
 interface SolveControlsProps {
   mazeId: string;

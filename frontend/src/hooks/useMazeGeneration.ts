@@ -1,20 +1,7 @@
 "use client";
 import { useState } from "react";
 import { generateMaze } from "@/lib/api";
-
-export interface MazeData {
-  id: string;
-  rows: number;
-  cols: number;
-  start: [number, number];
-  end: [number, number];
-  grid: Array<
-    Array<{
-      walls: [boolean, boolean, boolean, boolean];
-      wall_weights: [number, number, number, number];
-    }>
-  >;
-}
+import { MazeData } from "@/types";
 
 export function useMazeGeneration() {
   const [maze, setMaze] = useState<MazeData | null>(null);

@@ -90,12 +90,8 @@ func HandleGetPostByID(w http.ResponseWriter, r *http.Request) {
     }
 
     if userID != "" {
-        // 1. POST VOTE HYDRATION
         var postVote models.Vote
-        // DEBUG: Print these to your terminal
-        fmt.Printf("Querying Vote: User[%s] Target[%s] Type[post]\n", userID, post.ID)
         
-        // Use Find instead of First to avoid unnecessary 'Record Not Found' errors
         db.DB.Where("user_id = ? AND target_id = ? AND target_type = 'post'", userID, post.ID).
               Limit(1).
               Find(&postVote)
@@ -103,7 +99,6 @@ func HandleGetPostByID(w http.ResponseWriter, r *http.Request) {
         post.UserVote = postVote.Value
         fmt.Printf("Resulting Value: %d\n", post.UserVote)
 
-        // 2. COMMENT VOTE HYDRATION
         if len(post.Comments) > 0 {
             var commentIDs []string
             for _, c := range post.Comments {

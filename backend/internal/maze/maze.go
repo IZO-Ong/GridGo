@@ -223,9 +223,10 @@ func (m *Maze) GetNeighbors(p Point) []Point {
 // deadends, straightways, complexity, and junctions
 func (m *Maze) CalculateStats() MazeStats {
     stats := MazeStats{}
+    totalCells := float64(m.Rows * m.Cols)
 
-    for r := range m.Rows {
-        for c := range m.Cols {
+    for r := 0; r < m.Rows; r++ {
+        for c := 0; c < m.Cols; c++ {
             openCount := 0
             for _, isWall := range m.Grid[r][c].Walls {
                 if !isWall {
@@ -243,10 +244,12 @@ func (m *Maze) CalculateStats() MazeStats {
             }
         }
     }
-
-    // Complexity score based on junction-to-dead-end ratio
-    if stats.DeadEnds > 0 {
-        stats.Complexity = float64(stats.Junctions) / float64(stats.DeadEnds)
+	
+    if totalCells > 0 {
+        branchingFactor := (float64(stats.Junctions)*2.0 + float64(stats.DeadEnds)) / totalCells
+        scaleBonus := math.Log2(totalCells)
+        
+        stats.Complexity = branchingFactor * scaleBonus
     }
 
     return stats

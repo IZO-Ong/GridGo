@@ -1,3 +1,5 @@
+import { MazeData } from "@/types";
+
 export const DB_NAME = "GridGoDB";
 export const STORE_NAME = "mazes";
 
@@ -14,7 +16,7 @@ export const initDB = (): Promise<IDBDatabase> => {
   });
 };
 
-export const saveGenerateSession = async (maze: any) => {
+export const saveGenerateSession = async (maze: MazeData) => {
   const db = await initDB();
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(STORE_NAME, "readwrite");
@@ -25,7 +27,7 @@ export const saveGenerateSession = async (maze: any) => {
   });
 };
 
-export const loadGenerateSession = async (): Promise<any> => {
+export const loadGenerateSession = async (): Promise<MazeData> => {
   const db = await initDB();
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(STORE_NAME, "readonly");
@@ -36,13 +38,13 @@ export const loadGenerateSession = async (): Promise<any> => {
   });
 };
 
-export const saveSolveSession = async (maze: any) => {
+export const saveSolveSession = async (maze: MazeData) => {
   const db = await initDB();
   const transaction = db.transaction(STORE_NAME, "readwrite");
   transaction.objectStore(STORE_NAME).put(maze, "solve_session");
 };
 
-export const loadSolveSession = async (): Promise<any> => {
+export const loadSolveSession = async (): Promise<MazeData> => {
   const db = await initDB();
   const transaction = db.transaction(STORE_NAME, "readonly");
   const request = transaction.objectStore(STORE_NAME).get("solve_session");
