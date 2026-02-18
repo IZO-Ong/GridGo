@@ -19,9 +19,10 @@ export default function ForumCard({ post }: { post: Post }) {
   }, [post.user_vote, post.upvotes]);
 
   const handleVote = async (val: number) => {
-    if (!user) return alert("Log in to vote!");
-    const newValue = currentVote === val ? 0 : val;
-    const diff = newValue - currentVote;
+    if (!user) return alert("AUTH_REQUIRED");
+    const current = currentVote;
+    const newValue = current === val ? 0 : val;
+    const diff = newValue - current;
 
     setVoteCount((prev) => prev + diff);
     setCurrentVote(newValue);
@@ -38,7 +39,7 @@ export default function ForumCard({ post }: { post: Post }) {
       onClick={() => router.push(`/forum/post/${post.id}`)}
       className="flex h-48 border-4 border-black bg-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all group cursor-pointer overflow-hidden"
     >
-      <div onClick={(e) => e.stopPropagation()}>
+      <div className="flex" onClick={(e) => e.stopPropagation()}>
         <VoteSidebar
           upvotes={voteCount}
           userVote={currentVote}
@@ -68,7 +69,7 @@ export default function ForumCard({ post }: { post: Post }) {
               <Link
                 href={`/solve?id=${post.maze_id}`}
                 onClick={(e) => e.stopPropagation()}
-                className="hover:underline cursor-pointer flex items-center gap-1"
+                className="hover:underline flex items-center gap-1"
               >
                 <span className="opacity-30">REF:</span>{" "}
                 {post.maze_id.slice(0, 8)}

@@ -1,3 +1,4 @@
+// components/forum/CommentForm.tsx
 import { useState } from "react";
 
 interface CommentFormProps {

@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { getPostById, createComment, castVote } from "@/lib/api";
-import { Post, Comment } from "@/types";
+import { Post } from "@/types";
 import VoteSidebar from "@/components/forum/VoteSidebar";
 import CommentForm from "@/components/forum/CommentForm";
 import Link from "next/link";
@@ -29,7 +29,7 @@ export default function PostDetailPage() {
   };
 
   const handlePostVote = async (val: number) => {
-    if (!user || !post) return;
+    if (!user || !post) return alert("AUTH_REQUIRED");
     const current = post.user_vote ?? 0;
     const newValue = current === val ? 0 : val;
     setPost({
@@ -58,20 +58,15 @@ export default function PostDetailPage() {
     await castVote(commentId, "comment", val);
   };
 
-  const onCommentSubmit = async (content: string) => {
-    await createComment(post!.id, content);
-    fetchThread();
-  };
-
   if (loading)
     return (
-      <div className="p-20 font-black italic animate-pulse min-h-screen uppercase">
+      <div className="p-20 font-black italic animate-pulse min-h-screen uppercase text-center">
         INITIALIZING_THREAD...
       </div>
     );
   if (!post)
     return (
-      <div className="p-20 font-black text-red-600 min-h-screen uppercase">
+      <div className="p-20 font-black text-red-600 min-h-screen uppercase text-center">
         ERROR: THREAD_NOT_FOUND
       </div>
     );
@@ -95,7 +90,8 @@ export default function PostDetailPage() {
         Return_to_Feed
       </button>
 
-      <div className="flex border-4 border-black bg-white shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
+      {/* Main Post Section: items-stretch ensures Sidebar h-full works */}
+      <div className="flex items-stretch border-4 border-black bg-white shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
         <VoteSidebar
           upvotes={post.upvotes}
           userVote={post.user_vote}
@@ -134,8 +130,14 @@ export default function PostDetailPage() {
         <h3 className="text-xl font-black uppercase italic tracking-tighter">
           Response_Log ({post.comments?.length || 0})
         </h3>
+
         {user ? (
-          <CommentForm onSubmit={onCommentSubmit} />
+          <CommentForm
+            onSubmit={async (c) => {
+              await createComment(post.id, c);
+              fetchThread();
+            }}
+          />
         ) : (
           <div className="border-4 border-dashed border-black p-6 text-center opacity-40 font-black uppercase">
             Authentication_Required
@@ -146,7 +148,7 @@ export default function PostDetailPage() {
           {post.comments?.map((comment) => (
             <div
               key={comment.id}
-              className="border-4 border-black bg-white flex hover:translate-x-1 hover:-translate-y-1 transition-transform overflow-hidden"
+              className="border-4 border-black bg-white flex items-stretch hover:translate-x-1 hover:-translate-y-1 transition-transform overflow-hidden"
             >
               <VoteSidebar
                 small

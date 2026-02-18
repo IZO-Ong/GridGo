@@ -17,7 +17,7 @@ export default function VoteSidebar({
 
   return (
     <div
-      className={`${containerWidth} bg-zinc-50 border-r-4 border-black flex flex-col items-center py-4 gap-1 shrink-0 cursor-default`}
+      className={`${containerWidth} bg-zinc-50 border-r-4 border-black flex flex-col items-center py-6 gap-2 shrink-0 cursor-default`}
     >
       <button
         onClick={() => onVote(1)}
