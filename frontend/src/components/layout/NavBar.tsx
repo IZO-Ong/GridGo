@@ -24,6 +24,7 @@ export default function NavBar() {
           href={user ? `/profile/${user}` : "/login"}
           className="flex items-center gap-3 group h-10"
         >
+          {/* Avatar */}
           <div
             className={`w-10 h-10 border-2 border-black rounded-full flex items-center justify-center shrink-0 transition-colors ${
               user ? "bg-black text-white" : "group-hover:bg-zinc-100"
@@ -33,27 +34,30 @@ export default function NavBar() {
               {user ? user[0].toUpperCase() : "G"}
             </span>
           </div>
+
+          {/* User Info & Actions */}
           <div className="flex flex-col justify-center">
             <span className="text-[11px] font-black uppercase tracking-tighter leading-none">
               {user ? user : "Guest"}
             </span>
-            <span className="text-[8px] font-mono opacity-40 uppercase tracking-tight mt-1">
-              {user ? "Authenticated" : "Click to Sign_In"}
-            </span>
+
+            {user ? (
+              <button
+                onClick={handleLogout}
+                className="text-[8px] font-mono opacity-40 hover:opacity-100 hover:underline text-left uppercase tracking-tight mt-1 transition-opacity"
+              >
+                [Logout]
+              </button>
+            ) : (
+              <span className="text-[8px] font-mono opacity-40 uppercase tracking-tight mt-1">
+                Click to Sign In
+              </span>
+            )}
           </div>
         </Link>
-
-        {user && (
-          <button
-            onClick={handleLogout}
-            title="Terminate Session"
-            className="w-6 h-6 border-2 border-black flex items-center justify-center hover:bg-black hover:text-white transition-colors cursor-pointer group"
-          >
-            <span className="text-[10px] font-black">X</span>
-          </button>
-        )}
       </div>
 
+      {/* Main Nav Items */}
       <nav className="flex border-2 border-black divide-x-2 divide-black bg-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
         {navItems.map((item) => (
           <Link
