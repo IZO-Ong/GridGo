@@ -51,6 +51,17 @@ export default function ForumPage() {
           </div>
         )}
 
+        {!loading && posts.length === 0 && (
+          <div className="p-20 border-4 border-dashed border-black text-center">
+            <div className="font-black uppercase italic opacity-30 text-2xl tracking-tighter">
+              NOTHING_TO_SEE_HERE
+            </div>
+            <p className="text-[10px] font-black uppercase opacity-20 mt-2">
+              Contiribute to the forum by logging in and posting!
+            </p>
+          </div>
+        )}
+
         {!loading && hasMore && posts.length > 0 && (
           <button
             onClick={fetchPosts}

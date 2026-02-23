@@ -5,15 +5,16 @@ import (
 )
 
 type User struct {
-    ID           string    `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
-    Username     string    `gorm:"uniqueIndex;not null" json:"username"`
-    Email        string    `gorm:"uniqueIndex;not null" json:"email"`
-    PasswordHash string    `gorm:"not null" json:"-"`
-    CreatedAt    time.Time `json:"created_at"`
-    Mazes        []Maze    `gorm:"foreignKey:CreatorID" json:"mazes"`
-    Posts        []Post    `gorm:"foreignKey:CreatorID" json:"posts"`
-    Comments     []Comment `gorm:"foreignKey:CreatorID" json:"comments"`
-    Votes        []Vote    `gorm:"foreignKey:UserID" json:"votes"`
+    ID           string        `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+    Username     string        `gorm:"uniqueIndex;not null" json:"username"`
+    Email        string        `gorm:"uniqueIndex;not null" json:"email"`
+    PasswordHash string        `gorm:"not null" json:"-"`
+    CreatedAt    time.Time     `json:"created_at"`
+    Mazes        []Maze        `gorm:"foreignKey:CreatorID" json:"mazes"`
+    Posts        []Post        `gorm:"foreignKey:CreatorID" json:"posts"`
+    Comments     []Comment     `gorm:"foreignKey:CreatorID" json:"comments"`
+    PostVotes    []PostVote    `gorm:"foreignKey:UserID" json:"post_votes"`
+    CommentVotes []CommentVote `gorm:"foreignKey:UserID" json:"comment_votes"`
 }
 
 type PendingUser struct {

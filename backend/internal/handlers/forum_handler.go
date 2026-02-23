@@ -47,18 +47,18 @@ func HandleGetPosts(w http.ResponseWriter, r *http.Request) {
     var posts []models.Post
     db.DB.Preload("Creator").Preload("Maze").Preload("Comments").Order("created_at desc").Limit(10).Offset(offset).Find(&posts)
 
-    if userID != "" {
+    if userID != "" && len(posts) > 0 {
         var postIDs []string
         for _, p := range posts {
             postIDs = append(postIDs, p.ID) 
         }
 
-        var votes []models.Vote
-        db.DB.Where("user_id = ? AND target_id IN ?", userID, postIDs).Find(&votes)
+        var votes []models.PostVote
+        db.DB.Where("user_id = ? AND post_id IN ?", userID, postIDs).Find(&votes)
 
         voteMap := make(map[string]int)
         for _, v := range votes {
-            voteMap[v.TargetID] = v.Value
+            voteMap[v.PostID] = v.Value
         }
 
         for i := range posts {
@@ -90,41 +90,30 @@ func HandleGetPostByID(w http.ResponseWriter, r *http.Request) {
     }
 
     if userID != "" {
-        var postVote models.Vote
-        
-        db.DB.Where("user_id = ? AND target_id = ? AND target_type = 'post'", userID, post.ID).
-              Limit(1).
-              Find(&postVote)
-        
-        post.UserVote = postVote.Value
-        fmt.Printf("Resulting Value: %d\n", post.UserVote)
+		var postVote models.PostVote
+		db.DB.Where("user_id = ? AND post_id = ?", userID, post.ID).First(&postVote)
+		post.UserVote = postVote.Value
 
-        if len(post.Comments) > 0 {
-            var commentIDs []string
-            for _, c := range post.Comments {
-                commentIDs = append(commentIDs, c.ID)
-            }
+		if len(post.Comments) > 0 {
+			var commentIDs []string
+			for _, c := range post.Comments { commentIDs = append(commentIDs, c.ID) }
 
-            var votes []models.Vote
-            db.DB.Where("user_id = ? AND target_id IN ? AND target_type = 'comment'", userID, commentIDs).
-                  Find(&votes)
+			var cVotes []models.CommentVote
+			db.DB.Where("user_id = ? AND comment_id IN ?", userID, commentIDs).Find(&cVotes)
 
-            voteMap := make(map[string]int)
-            for _, v := range votes {
-                voteMap[v.TargetID] = v.Value
-            }
-
-            for i := range post.Comments {
-                post.Comments[i].UserVote = voteMap[post.Comments[i].ID]
-            }
-        }
-    }
+			voteMap := make(map[string]int)
+			for _, v := range cVotes { voteMap[v.CommentID] = v.Value }
+			for i := range post.Comments {
+				post.Comments[i].UserVote = voteMap[post.Comments[i].ID]
+			}
+		}
+	}
 
     w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(post)
 }
 
-// HandleDeletePost ensures only the author can purge the thread
+// HandleDeletePost ensures only the author can delete the thread
 func HandleDeletePost(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete { return }
 	
@@ -158,24 +147,28 @@ func HandleVote(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    var vote models.Vote
-    res := db.DB.Where("user_id = ? AND target_id = ? AND target_type = ?", 
-        userID, req.TargetID, req.TargetType).First(&vote)
-
-    if res.Error == nil {
-        if vote.Value == req.Value {
-            db.DB.Delete(&vote)
+    if req.TargetType == "post" {
+        var vote models.PostVote
+        res := db.DB.Where("user_id = ? AND post_id = ?", userID, req.TargetID).First(&vote)
+        if res.Error == nil {
+            if vote.Value == req.Value { db.DB.Delete(&vote) } else {
+                vote.Value = req.Value
+                db.DB.Save(&vote)
+            }
         } else {
-            vote.Value = req.Value
-            db.DB.Save(&vote)
+            db.DB.Create(&models.PostVote{UserID: userID, PostID: req.TargetID, Value: req.Value})
         }
     } else {
-        db.DB.Create(&models.Vote{
-            UserID:     userID,
-            TargetID:   req.TargetID,
-            TargetType: req.TargetType,
-            Value:      req.Value,
-        })
+        var vote models.CommentVote
+        res := db.DB.Where("user_id = ? AND comment_id = ?", userID, req.TargetID).First(&vote)
+        if res.Error == nil {
+            if vote.Value == req.Value { db.DB.Delete(&vote) } else {
+                vote.Value = req.Value
+                db.DB.Save(&vote)
+            }
+        } else {
+            db.DB.Create(&models.CommentVote{UserID: userID, CommentID: req.TargetID, Value: req.Value})
+        }
     }
 
     updateVoteCount(req.TargetID, req.TargetType)
@@ -183,14 +176,14 @@ func HandleVote(w http.ResponseWriter, r *http.Request) {
 }
 
 func updateVoteCount(targetID, targetType string) {
-	var total int64
-	db.DB.Model(&models.Vote{}).Where("target_id = ?", targetID).Select("SUM(value)").Row().Scan(&total)
-
-	if targetType == "post" {
-		db.DB.Model(&models.Post{}).Where("id = ?", targetID).Update("upvotes", total)
-	} else {
-		db.DB.Model(&models.Comment{}).Where("id = ?", targetID).Update("upvotes", total)
-	}
+    var total int64
+    if targetType == "post" {
+        db.DB.Model(&models.PostVote{}).Where("post_id = ?", targetID).Select("SUM(value)").Row().Scan(&total)
+        db.DB.Model(&models.Post{}).Where("id = ?", targetID).Update("upvotes", total)
+    } else {
+        db.DB.Model(&models.CommentVote{}).Where("comment_id = ?", targetID).Select("SUM(value)").Row().Scan(&total)
+        db.DB.Model(&models.Comment{}).Where("id = ?", targetID).Update("upvotes", total)
+    }
 }
 
 // HandleCreateComment adds a new flat comment to a post
@@ -220,35 +213,35 @@ func HandleCreateComment(w http.ResponseWriter, r *http.Request) {
 
 // HandleGetComments fetches comments for a post, sorted by upvotes
 func HandleGetComments(w http.ResponseWriter, r *http.Request) {
-	postID := r.URL.Query().Get("post_id")
-	userID := middleware.GetUserID(r)
-	var comments []models.Comment
+    postID := r.URL.Query().Get("post_id")
+    userID := middleware.GetUserID(r)
+    var comments []models.Comment
 
-	db.DB.Preload("Creator").Where("post_id = ?", postID).Order("upvotes desc").Find(&comments)
+    db.DB.Preload("Creator").Where("post_id = ?", postID).Order("upvotes desc").Find(&comments)
 
-	if userID != "" {
-		var commentIDs []string
-		for _, c := range comments {
-			commentIDs = append(commentIDs, c.ID)
-		}
+    if userID != "" && len(comments) > 0 {
+        var commentIDs []string
+        for _, c := range comments {
+            commentIDs = append(commentIDs, c.ID)
+        }
 
-		if len(commentIDs) > 0 {
-			var votes []models.Vote
-			db.DB.Where("user_id = ? AND target_id IN ? AND target_type = 'comment'", userID, commentIDs).Find(&votes)
+        // Query the specific CommentVote table
+        var votes []models.CommentVote
+        db.DB.Where("user_id = ? AND comment_id IN ?", userID, commentIDs).Find(&votes)
 
-			voteMap := make(map[string]int)
-			for _, v := range votes {
-				voteMap[v.TargetID] = v.Value
-			}
+        voteMap := make(map[string]int)
+        for _, v := range votes {
+            voteMap[v.CommentID] = v.Value
+        }
 
-			for i := range comments {
-				comments[i].UserVote = voteMap[comments[i].ID]
-			}
-		}
-	}
+        for i := range comments {
+            comments[i].UserVote = voteMap[comments[i].ID]
+        }
+    }
 
-	json.NewEncoder(w).Encode(comments)
+    json.NewEncoder(w).Encode(comments)
 }
+
 // HandleDeleteComment restricts deletion to the comment owner
 func HandleDeleteComment(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete { return }

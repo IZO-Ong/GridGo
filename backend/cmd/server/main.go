@@ -37,7 +37,7 @@ func main() {
 	mux.HandleFunc("/api/maze/thumbnail", handlers.HandleUpdateThumbnail)
 
     // User & Profile Endpoints
-    mux.HandleFunc("/api/profile", handlers.HandleGetProfile)
+    mux.HandleFunc("/api/profile", middleware.OptionalAuth(handlers.HandleGetProfile))
 
 	// Post Endpoints
 	mux.HandleFunc("/api/forum/posts", middleware.OptionalAuth(handlers.HandleGetPosts))

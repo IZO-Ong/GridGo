@@ -65,25 +65,25 @@ export default function NewPost() {
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-2">
           <label className="block text-[10px] font-black uppercase opacity-40">
-            Thread_Title
+            Title
           </label>
           <input
             name="title"
             required
-            placeholder="A fascinating 200x300 matrix analysis..."
+            placeholder="A fascinating maze..."
             className="w-full border-4 border-black p-4 font-bold text-sm focus:bg-zinc-50 outline-none transition-colors"
           />
         </div>
 
         <div className="space-y-2">
           <label className="block text-[10px] font-black uppercase opacity-40">
-            Content_Payload
+            Description
           </label>
           <textarea
             name="content"
             required
             rows={6}
-            placeholder="Explain the algorithmic complexity or visual patterns..."
+            placeholder="Describe your maze here!"
             className="w-full border-4 border-black p-4 font-bold text-sm focus:bg-zinc-50 outline-none transition-colors"
           />
         </div>

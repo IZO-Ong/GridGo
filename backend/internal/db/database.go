@@ -26,7 +26,8 @@ func InitDB() {
         &models.PendingUser{},
         &models.Post{},
         &models.Comment{},
-        &models.Vote{},
+        &models.PostVote{},
+        &models.CommentVote{},
     )
     
     if err != nil {

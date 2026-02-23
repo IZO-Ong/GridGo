@@ -71,7 +71,7 @@ export default function SolveControls({
 
       <div className="col-span-3 space-y-2">
         <label className="block font-bold uppercase tracking-widest text-[9px]">
-          Start [R, C]
+          Start Coordinate
         </label>
         <GridDimensionsInput
           rows={startPoint[0]}
@@ -93,7 +93,7 @@ export default function SolveControls({
 
       <div className="col-span-3 space-y-2">
         <label className="block font-bold uppercase tracking-widest text-[9px]">
-          End [R, C]
+          End Coordinate
         </label>
         <GridDimensionsInput
           rows={endPoint[0]}

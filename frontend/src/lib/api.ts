@@ -119,7 +119,9 @@ export async function updateThumbnail(id: string, thumbnail: string) {
 // --- Forum and Profile APIs ---
 
 export async function getProfile(username: string): Promise<User> {
-  const res = await fetch(`${BASE_URL}/api/profile?username=${username}`);
+  const res = await fetch(`${BASE_URL}/api/profile?username=${username}`, {
+    headers: getAuthHeaders(),
+  });
   if (!res.ok) throw new Error("USER_NOT_FOUND");
   return res.json();
 }
@@ -203,4 +205,33 @@ export async function createComment(
 
   if (!res.ok) throw new Error("COMMENT_TRANSMISSION_FAILURE");
   return res.json();
+}
+
+export async function deletePost(postId: string): Promise<boolean> {
+  const res = await fetch(`${BASE_URL}/api/forum/post/delete?id=${postId}`, {
+    method: "DELETE",
+    headers: getAuthHeaders(),
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error("POST_DELETE_FAILURE:", errorText);
+  }
+  return res.ok;
+}
+
+export async function deleteComment(commentId: string): Promise<boolean> {
+  const res = await fetch(
+    `${BASE_URL}/api/forum/comment/delete?id=${commentId}`,
+    {
+      method: "DELETE",
+      headers: getAuthHeaders(),
+    }
+  );
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error("COMMENT_DELETE_FAILURE:", errorText);
+  }
+  return res.ok;
 }

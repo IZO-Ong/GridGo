@@ -68,7 +68,7 @@ func HandleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": dbUser.ID,
-		"exp":     time.Now().Add(time.Hour * 72).Unix(),
+		"exp":     time.Now().Add(time.Hour * 12).Unix(),
 	})
 	tokenString, _ := token.SignedString(middleware.GetJWTKey())
 	url := fmt.Sprintf("%s/auth-callback?token=%s&username=%s", os.Getenv("FRONTEND_URL"), tokenString, dbUser.Username)
