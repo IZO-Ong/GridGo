@@ -12,6 +12,7 @@ import GenerateControls from "@/components/maze/GenerateControls";
 import { useImageDimensions } from "@/hooks/useImageDimensions";
 import { useMazeGeneration } from "@/hooks/useMazeGeneration";
 import { Maze } from "@/types";
+import { useAuth } from "@/context/AuthContext";
 
 const ALGORITHMS = [
   { id: "image", label: "IMAGE_KRUSKAL" },
@@ -20,6 +21,7 @@ const ALGORITHMS = [
 ];
 
 export default function CreatePage() {
+  const { user } = useAuth();
   const [activeMaze, setActiveMaze] = useState<Maze | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);
 
@@ -28,6 +30,13 @@ export default function CreatePage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const { dims, updateDim, clampDimensions, handleImageChange } =
     useImageDimensions();
+
+  // TRANSITION LOGIC: Clear UI state on Identity Change (Login or Logout)
+  useEffect(() => {
+    if (hasLoaded) {
+      setActiveMaze(null);
+    }
+  }, [user]);
 
   useEffect(() => {
     const init = async () => {

@@ -54,10 +54,19 @@ function SolveCore() {
     path: [number, number][];
   } | null>(null);
 
+  // TRANSITION LOGIC: Clear UI state on Identity Change
+  useEffect(() => {
+    if (hasLoaded) {
+      setActiveMaze(null);
+      setSolution(null);
+      setMazeId("");
+    }
+  }, [user]);
+
   useEffect(() => {
     const init = async () => {
       if (urlId) {
-        await handleLoadID(urlId); // Load specifically from URL param
+        await handleLoadID(urlId);
       } else {
         const savedMaze = await loadSolveSession();
         if (savedMaze) {
@@ -76,16 +85,6 @@ function SolveCore() {
     };
     init();
   }, [urlId]);
-
-  useEffect(() => {
-    if (!user) {
-      setActiveMaze(null);
-      setSolution(null);
-      setMazeId("");
-      // Add a function to your lib/db to clear the session
-      // clearSolveSession();
-    }
-  }, [user]);
 
   useEffect(() => {
     if (hasLoaded) {

@@ -1,3 +1,4 @@
+"use client";
 import { Maze } from "@/types";
 
 export const DB_NAME = "GridGoDB";
@@ -27,15 +28,21 @@ export const saveGenerateSession = async (maze: Maze) => {
   });
 };
 
-export const loadGenerateSession = async (): Promise<Maze> => {
+export const loadGenerateSession = async (): Promise<Maze | null> => {
   const db = await initDB();
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(STORE_NAME, "readonly");
     const store = transaction.objectStore(STORE_NAME);
     const request = store.get("last_generated");
-    request.onsuccess = () => resolve(request.result);
+    request.onsuccess = () => resolve(request.result || null);
     request.onerror = () => reject(request.error);
   });
+};
+
+export const clearGenerateSession = async () => {
+  const db = await initDB();
+  const transaction = db.transaction(STORE_NAME, "readwrite");
+  transaction.objectStore(STORE_NAME).delete("last_generated");
 };
 
 export const saveSolveSession = async (maze: Maze) => {
@@ -44,13 +51,19 @@ export const saveSolveSession = async (maze: Maze) => {
   transaction.objectStore(STORE_NAME).put(maze, "solve_session");
 };
 
-export const loadSolveSession = async (): Promise<Maze> => {
+export const loadSolveSession = async (): Promise<Maze | null> => {
   const db = await initDB();
   const transaction = db.transaction(STORE_NAME, "readonly");
   const request = transaction.objectStore(STORE_NAME).get("solve_session");
   return new Promise((resolve) => {
-    request.onsuccess = () => resolve(request.result);
+    request.onsuccess = () => resolve(request.result || null);
   });
+};
+
+export const clearSolveSession = async () => {
+  const db = await initDB();
+  const transaction = db.transaction(STORE_NAME, "readwrite");
+  transaction.objectStore(STORE_NAME).delete("solve_session");
 };
 
 export const savePreferences = async (

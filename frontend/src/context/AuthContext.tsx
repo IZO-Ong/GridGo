@@ -1,15 +1,15 @@
 "use client";
 import { createContext, useContext, useEffect, useState } from "react";
+import { clearSolveSession, clearGenerateSession } from "@/lib/db";
 
 interface AuthContextType {
   user: string | null;
-  login: (token: string, username: string) => void;
-  logout: () => void;
+  login: (token: string, username: string) => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Helper to check if the JWT is expired
 const isTokenExpired = (token: string | null): boolean => {
   if (!token) return true;
   try {
@@ -22,7 +22,6 @@ const isTokenExpired = (token: string | null): boolean => {
         .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
         .join("")
     );
-
     const { exp } = JSON.parse(jsonPayload);
     return Date.now() >= exp * 1000;
   } catch (error) {
@@ -47,17 +46,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const login = (token: string, username: string) => {
+  const login = async (token: string, username: string) => {
+    await clearSolveSession();
+    await clearGenerateSession();
+
     localStorage.setItem("gridgo_token", token);
     localStorage.setItem("gridgo_user", username);
     setUser(username);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await clearSolveSession();
+    await clearGenerateSession();
+
     localStorage.removeItem("gridgo_token");
     localStorage.removeItem("gridgo_user");
     setUser(null);
-    // Only redirect if we are in a browser context
     if (typeof window !== "undefined") {
       window.location.href = "/login";
     }
