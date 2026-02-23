@@ -45,47 +45,36 @@ export default function ProfilePage() {
     )
       return;
 
-    // Wait for server to confirm the DB deletion
     const success = await apiCall(id);
 
     if (success) {
       setProfile((prev: any) => {
         if (!prev) return prev;
 
-        // 1. Initialize local copies of our state arrays
         let nextMazes = [...prev.mazes];
         let nextPosts = [...prev.posts];
         let nextComments = [...prev.comments];
 
-        // 2. RUN THE CHAIN REACTION
         if (type === "mazes") {
-          // STEP A: Delete the Maze
           nextMazes = nextMazes.filter((m) => m.id !== id);
 
-          // STEP B: Find all Posts tied to this Maze
           const affectedPostIds = nextPosts
             .filter((p) => p.maze_id === id)
             .map((p) => p.id);
 
-          // STEP C: Delete those Posts
           nextPosts = nextPosts.filter((p) => p.maze_id !== id);
 
-          // STEP D: Delete all Comments belonging to the deleted Posts
           nextComments = nextComments.filter(
             (c) => !affectedPostIds.includes(c.post_id)
           );
         } else if (type === "posts") {
-          // STEP A: Delete the Post
           nextPosts = nextPosts.filter((p) => p.id !== id);
 
-          // STEP B: Delete all Comments tied to that Post
           nextComments = nextComments.filter((c) => c.post_id !== id);
         } else if (type === "comments") {
-          // Just delete the single comment
           nextComments = nextComments.filter((c) => c.id !== id);
         }
 
-        // 3. RETURN FULLY SYNCHRONIZED STATE
         return {
           ...prev,
           mazes: nextMazes,

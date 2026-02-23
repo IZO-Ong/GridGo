@@ -78,18 +78,29 @@ func HandleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 func HandleRegister(w http.ResponseWriter, r *http.Request) {
     var creds struct {
         Email    string `json:"email"`
-		Username string `json:"username"`
+        Username string `json:"username"`
         Password string `json:"password"`
     }
     if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
-        http.Error(w, "INVALID_PAYLOAD", http.StatusBadRequest)
+        http.Error(w, "INVALID_PAYLOAD", 400)
         return
+    }
+
+    var pending models.PendingUser
+    err := db.DB.Where("email = ?", creds.Email).First(&pending).Error
+
+    if err == nil {
+        if time.Now().Before(pending.ExpiresAt) {
+            go sendEmail(pending.Email, pending.OTP)
+            w.WriteHeader(http.StatusAccepted)
+            return
+        }
     }
 
     hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(creds.Password), 12)
     otp := utils.GenerateOTP()
 
-    pending := models.PendingUser{
+    newPending := models.PendingUser{
         Email:        creds.Email,
         Username:     creds.Username,
         PasswordHash: string(hashedPassword),
@@ -97,8 +108,11 @@ func HandleRegister(w http.ResponseWriter, r *http.Request) {
         ExpiresAt:    time.Now().Add(10 * time.Minute),
     }
 
-    if err := db.DB.Save(&pending).Error; err != nil {
-        http.Error(w, "Email already in use for registration", http.StatusConflict)
+    if err := db.DB.Where(models.PendingUser{Email: creds.Email}).
+        Assign(newPending).
+        FirstOrCreate(&newPending).Error; err != nil {
+        log.Printf("DB_ERROR: %v", err)
+        http.Error(w, "SYSTEM_OVERLOAD", 500)
         return
     }
 

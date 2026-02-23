@@ -18,8 +18,11 @@ export default function AuthPage() {
   const router = useRouter();
 
   const [view, setView] = useState<"login" | "register" | "verify">("login");
+  // Store full registration data in case we need to resend
   const [formData, setFormData] = useState({
     email: "",
+    username: "",
+    password: "",
   });
 
   const [loading, setLoading] = useState(false);
@@ -34,11 +37,18 @@ export default function AuthPage() {
         login(data.token, data.username);
         router.push("/");
       } else if (view === "register") {
-        setFormData({ email: payload.email });
+        // Save the full payload so resending actually works
+        // (your backend expects username/password in HandleRegister)
+        setFormData({
+          email: payload.email,
+          username: payload.username,
+          password: payload.password,
+        });
         await apiRegister(payload);
         setView("verify");
         setError("SUCCESS: Code sent to email.");
       } else if (view === "verify") {
+        // payload here is just the 6-digit string from VerifyForm
         await verifyAccount(formData.email, payload);
         setView("login");
         setError("SUCCESS: Verified. Please login.");
@@ -47,6 +57,17 @@ export default function AuthPage() {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    setError(null);
+    try {
+      await apiRegister(formData);
+      setError("SUCCESS: New code transmitted.");
+    } catch (err: any) {
+      setError(err.message || "RESEND_FAILURE");
+      throw err;
     }
   };
 
@@ -62,7 +83,7 @@ export default function AuthPage() {
       error={error}
       footerLabel={view === "login" ? "Create an account" : "Back to Login"}
       footerAction={() => {
-        setError(null); // Clear errors when switching views
+        setError(null);
         setView(view === "login" ? "register" : "login");
       }}
     >
@@ -80,6 +101,7 @@ export default function AuthPage() {
         <VerifyForm
           email={formData.email}
           onVerify={handleAuthSubmit}
+          onResend={handleResend}
           loading={loading}
         />
       )}
