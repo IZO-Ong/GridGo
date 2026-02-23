@@ -56,7 +56,7 @@ export default function SolveControls({
             type="text"
             value={mazeId}
             onChange={(e) => setMazeId(e.target.value.toUpperCase())}
-            placeholder="M-XXXX-X"
+            placeholder="M-000000-X"
             className="flex-1 min-w-0 px-3 outline-none font-mono font-bold text-[10px] bg-transparent uppercase"
           />
           <button

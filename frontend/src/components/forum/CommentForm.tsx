@@ -26,7 +26,7 @@ export default function CommentForm({ onSubmit }: CommentFormProps) {
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder="APPEND_DATA_TO_THREAD..."
+        placeholder="ADD_A_COMMENT..."
         className="w-full border-4 border-black p-4 font-bold text-sm focus:bg-zinc-50 outline-none h-32"
         required
       />

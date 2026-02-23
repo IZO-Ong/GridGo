@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"math/rand"
 	"net/http"
 	"net/smtp"
 	"os"
@@ -13,6 +12,7 @@ import (
 	"github.com/IZO-Ong/gridgo/internal/db"
 	"github.com/IZO-Ong/gridgo/internal/middleware"
 	"github.com/IZO-Ong/gridgo/internal/models"
+	"github.com/IZO-Ong/gridgo/internal/utils"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/markbates/goth/gothic"
 	"golang.org/x/crypto/bcrypt"
@@ -75,10 +75,6 @@ func HandleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
-func GenerateOTP() string {
-	return fmt.Sprintf("%06d", rand.Intn(1000000))
-}
-
 func HandleRegister(w http.ResponseWriter, r *http.Request) {
     var creds struct {
         Email    string `json:"email"`
@@ -91,7 +87,7 @@ func HandleRegister(w http.ResponseWriter, r *http.Request) {
     }
 
     hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(creds.Password), 12)
-    otp := GenerateOTP()
+    otp := utils.GenerateOTP()
 
     pending := models.PendingUser{
         Email:        creds.Email,

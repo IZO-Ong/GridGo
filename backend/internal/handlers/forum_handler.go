@@ -3,7 +3,6 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"net/http"
 	"strconv"
 	"time"
@@ -16,27 +15,27 @@ import (
 
 // HandleCreatePost handles new forum threads
 func HandleCreatePost(w http.ResponseWriter, r *http.Request) {
-	userID := middleware.GetUserID(r)
-	if userID == "" {
-		http.Error(w, "UNAUTHORIZED", 401)
-		return
-	}
+    userID := middleware.GetUserID(r)
+    if userID == "" {
+        http.Error(w, "UNAUTHORIZED", 401)
+        return
+    }
 
-	var p models.Post
-	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
-		http.Error(w, "INVALID_PAYLOAD", 400)
-		return
-	}
+    var p models.Post
+    if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+        http.Error(w, "INVALID_PAYLOAD", 400)
+        return
+    }
 
-	p.ID = "P-" + uuid.New().String()[:8]
-	p.CreatorID = userID
-	p.CreatedAt = time.Now()
+    p.ID = "P-" + uuid.New().String()[:12]
+    p.CreatorID = userID
+    p.CreatedAt = time.Now()
 
-	if err := db.DB.Create(&p).Error; err != nil {
-		http.Error(w, "DB_ERROR", 500)
-		return
-	}
-	json.NewEncoder(w).Encode(p)
+    if err := db.DB.Create(&p).Error; err != nil {
+        http.Error(w, "DB_ERROR", 500)
+        return
+    }
+    json.NewEncoder(w).Encode(p)
 }
 
 // HandleGetPosts supports infinite scroll via offset
@@ -188,27 +187,27 @@ func updateVoteCount(targetID, targetType string) {
 
 // HandleCreateComment adds a new flat comment to a post
 func HandleCreateComment(w http.ResponseWriter, r *http.Request) {
-	userID := middleware.GetUserID(r)
-	if userID == "" {
-		http.Error(w, "AUTH_REQUIRED", 401)
-		return
-	}
+    userID := middleware.GetUserID(r)
+    if userID == "" {
+        http.Error(w, "AUTH_REQUIRED", 401)
+        return
+    }
 
-	var c models.Comment
-	if err := json.NewDecoder(r.Body).Decode(&c); err != nil {
-		http.Error(w, "INVALID_PAYLOAD", 400)
-		return
-	}
+    var c models.Comment
+    if err := json.NewDecoder(r.Body).Decode(&c); err != nil {
+        http.Error(w, "INVALID_PAYLOAD", 400)
+        return
+    }
 
-	c.ID = fmt.Sprintf("C-%d", rand.Intn(1000000))
-	c.CreatorID = userID
-	c.CreatedAt = time.Now()
+    c.ID = "C-" + uuid.New().String()[:12]
+    c.CreatorID = userID
+    c.CreatedAt = time.Now()
 
-	if err := db.DB.Create(&c).Error; err != nil {
-		http.Error(w, "DB_ERROR", 500)
-		return
-	}
-	json.NewEncoder(w).Encode(c)
+    if err := db.DB.Create(&c).Error; err != nil {
+        http.Error(w, "DB_ERROR", 500)
+        return
+    }
+    json.NewEncoder(w).Encode(c)
 }
 
 // HandleGetComments fetches comments for a post, sorted by upvotes

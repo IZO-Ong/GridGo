@@ -3,7 +3,6 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"net/http"
 	"strconv"
 
@@ -11,6 +10,7 @@ import (
 	"github.com/IZO-Ong/gridgo/internal/maze"
 	"github.com/IZO-Ong/gridgo/internal/middleware"
 	"github.com/IZO-Ong/gridgo/internal/models"
+	"github.com/IZO-Ong/gridgo/internal/utils"
 )
 
 func HandleGenerateMaze(w http.ResponseWriter, r *http.Request) {
@@ -45,16 +45,21 @@ func HandleGenerateMaze(w http.ResponseWriter, r *http.Request) {
 	
 	weightsBytes, _ := json.Marshal(myMaze.Weights)
 	stats := myMaze.CalculateStats()
-	mazeID := fmt.Sprintf("M-%d-X", rand.Intn(9000)+1000)
+	mazeID := utils.GenerateMazeID()
 
 	userID := middleware.GetUserID(r)
 	
 	dbMaze := models.Maze{
-		ID: mazeID, WeightsJSON: string(weightsBytes),
-		Rows: rows, Cols: cols,
-		StartRow: myMaze.Start[0], StartCol: myMaze.Start[1],
-		EndRow: myMaze.End[0], EndCol: myMaze.End[1],
-		Complexity: stats.Complexity, DeadEnds: stats.DeadEnds,
+		ID:          mazeID, 
+		WeightsJSON: string(weightsBytes),
+		Rows:        rows, 
+		Cols:        cols,
+		StartRow:    myMaze.Start[0], 
+		StartCol:    myMaze.Start[1],
+		EndRow:      myMaze.End[0], 
+		EndCol:      myMaze.End[1],
+		Complexity:  stats.Complexity, 
+		DeadEnds:    stats.DeadEnds,
 	}
 
 	if userID != "" { dbMaze.CreatorID = &userID }

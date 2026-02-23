@@ -30,18 +30,28 @@ export default function PostDetailPage() {
 
   const handlePostVote = async (val: number) => {
     if (!user || !post) return alert("AUTH_REQUIRED");
+
     const current = post.user_vote ?? 0;
     const newValue = current === val ? 0 : val;
+    const diff = newValue - current;
+
     setPost({
       ...post,
       user_vote: newValue,
-      upvotes: post.upvotes + (newValue - current),
+      upvotes: post.upvotes + diff,
     });
-    await castVote(post.id, "post", newValue);
+
+    try {
+      await castVote(post.id, "post", newValue);
+    } catch (err) {
+      // Rollback on failure
+      fetchThread();
+    }
   };
 
   const handleCommentVote = async (commentId: string, val: number) => {
     if (!user || !post) return;
+
     setPost({
       ...post,
       comments: post.comments.map((c) => {
@@ -55,7 +65,12 @@ export default function PostDetailPage() {
         };
       }),
     });
-    await castVote(commentId, "comment", val);
+
+    try {
+      await castVote(commentId, "comment", val);
+    } catch (err) {
+      fetchThread();
+    }
   };
 
   if (loading)
@@ -72,10 +87,10 @@ export default function PostDetailPage() {
     );
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 pb-32">
+    <div className="max-w-5xl mx-auto space-y-6 pb-32">
       <button
         onClick={() => router.back()}
-        className="flex items-center gap-2 text-[10px] font-black uppercase opacity-40 hover:opacity-100 cursor-pointer"
+        className="flex items-center gap-2 text-[10px] font-black uppercase opacity-40 hover:opacity-100 cursor-pointer transition-opacity"
       >
         <svg
           width="14"
@@ -99,7 +114,6 @@ export default function PostDetailPage() {
 
         <div className="flex-1 p-8 flex items-start gap-8">
           <div className="flex-1 space-y-6 flex flex-col">
-            {/* --- UPDATED POST HEADER --- */}
             <div className="text-xs font-black uppercase opacity-40 flex items-center gap-2">
               <Link
                 href={`/profile/${post.creator?.username}`}
@@ -117,19 +131,19 @@ export default function PostDetailPage() {
               <span>•</span>
               <span>{new Date(post.created_at).toLocaleString()}</span>
             </div>
-            {/* --------------------------- */}
 
             <h1 className="text-4xl font-black uppercase tracking-tighter leading-none">
               {post.title}
             </h1>
-            <p className="text-lg opacity-80 whitespace-pre-wrap">
+            <p className="text-lg opacity-80 whitespace-pre-wrap leading-tight">
               {post.content}
             </p>
           </div>
+
           {post.maze?.thumbnail && (
             <Link
               href={`/solve?id=${post.maze_id}`}
-              className="hidden lg:block w-64 h-64 border-4 border-black relative overflow-hidden group shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]"
+              className="hidden lg:block w-64 h-64 border-4 border-black relative overflow-hidden group shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-none transition-all hover:translate-x-1 hover:translate-y-1"
             >
               <img
                 src={post.maze.thumbnail}
@@ -143,7 +157,7 @@ export default function PostDetailPage() {
 
       <div className="pt-8 space-y-6">
         <h3 className="text-xl font-black uppercase italic tracking-tighter">
-          Response_Log ({post.comments?.length || 0})
+          Comment_Section ({post.comments?.length || 0})
         </h3>
 
         {user ? (
@@ -163,7 +177,7 @@ export default function PostDetailPage() {
           {post.comments?.map((comment) => (
             <div
               key={comment.id}
-              className="border-4 border-black bg-white flex items-stretch hover:translate-x-1 hover:-translate-y-1 transition-transform overflow-hidden"
+              className="border-4 border-black bg-white flex items-stretch overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
             >
               <VoteSidebar
                 small
@@ -190,7 +204,6 @@ export default function PostDetailPage() {
                     {new Date(comment.created_at).toLocaleDateString()}
                   </span>
                 </div>
-                {/* ------------------------------- */}
 
                 <p className="text-sm font-medium leading-relaxed">
                   {comment.content}
