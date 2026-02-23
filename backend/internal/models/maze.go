@@ -16,6 +16,5 @@ type Maze struct {
     EndRow      int       `gorm:"not null" json:"end_row"`
     EndCol      int       `gorm:"not null" json:"end_col"`
     Complexity  float64   `json:"complexity"`
-    DeadEnds    int       `json:"dead_ends"`
     CreatedAt   time.Time `json:"created_at"`
 }

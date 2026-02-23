@@ -17,7 +17,6 @@ type Maze struct {
     End        [2]int         `json:"end"`
     Grid       [][]Cell       `json:"grid"`
     Weights    map[string]int `json:"weights"`
-    DeadEnds   int            `json:"dead_ends"`
     Complexity float64        `json:"complexity"`
 }
 

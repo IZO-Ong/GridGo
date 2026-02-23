@@ -59,7 +59,6 @@ func HandleGenerateMaze(w http.ResponseWriter, r *http.Request) {
 		EndRow:      myMaze.End[0], 
 		EndCol:      myMaze.End[1],
 		Complexity:  stats.Complexity, 
-		DeadEnds:    stats.DeadEnds,
 	}
 
 	if userID != "" { dbMaze.CreatorID = &userID }
