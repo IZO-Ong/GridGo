@@ -1,8 +1,8 @@
 "use client";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { MazeData } from "@/types";
+import { Maze } from "@/types";
 
-export function useMazeCanvas(maze: MazeData | null) {
+export function useMazeCanvas(maze: Maze | null) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dynamicCellSize, setDynamicCellSize] = useState(0);
   const [transform, setTransform] = useState({ s: 1, x: 0, y: 0 });

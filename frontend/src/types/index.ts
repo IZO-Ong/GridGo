@@ -6,7 +6,19 @@ export interface User {
 
 export interface Maze {
   id: string;
+  rows: number;
+  cols: number;
+  start: [number, number];
+  end: [number, number];
+  grid: Array<
+    Array<{
+      walls: [boolean, boolean, boolean, boolean];
+      wall_weights: [number, number, number, number];
+    }>
+  >;
   thumbnail?: string;
+  complexity?: number;
+  created_at: string;
 }
 
 export interface Comment {
@@ -32,18 +44,4 @@ export interface Post {
   user_vote?: number;
   comments: Comment[];
   created_at: string;
-}
-
-export interface MazeData {
-  id: string;
-  rows: number;
-  cols: number;
-  start: [number, number];
-  end: [number, number];
-  grid: Array<
-    Array<{
-      walls: [boolean, boolean, boolean, boolean];
-      wall_weights: [number, number, number, number];
-    }>
-  >;
 }

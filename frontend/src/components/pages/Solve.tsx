@@ -10,7 +10,8 @@ import {
 import MazeCanvas from "@/components/maze/MazeCanvas";
 import SolveControls from "@/components/maze/SolveControls";
 import { solveMaze, getMazeById } from "@/lib/api";
-import { MazeData } from "@/types";
+import { Maze } from "@/types";
+import { useAuth } from "@/context/AuthContext";
 
 const SOLVE_ALGORITHMS = [
   { id: "astar", label: "A*_SEARCH" },
@@ -33,10 +34,11 @@ export default function SolvePage() {
 }
 
 function SolveCore() {
+  const { user } = useAuth();
   const searchParams = useSearchParams();
   const urlId = searchParams.get("id");
 
-  const [activeMaze, setActiveMaze] = useState<MazeData | null>(null);
+  const [activeMaze, setActiveMaze] = useState<Maze | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -74,6 +76,16 @@ function SolveCore() {
     };
     init();
   }, [urlId]);
+
+  useEffect(() => {
+    if (!user) {
+      setActiveMaze(null);
+      setSolution(null);
+      setMazeId("");
+      // Add a function to your lib/db to clear the session
+      // clearSolveSession();
+    }
+  }, [user]);
 
   useEffect(() => {
     if (hasLoaded) {

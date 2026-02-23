@@ -13,15 +13,24 @@ export default function NewPost() {
   const [selectedMazeId, setSelectedMazeId] = useState<string>("");
 
   useEffect(() => {
-    if (!user) router.push("/forum");
+    if (!user) {
+      router.push("/forum");
+      return;
+    }
 
     const init = async () => {
-      const currentSession = await loadGenerateSession();
-      if (currentSession) setSelectedMazeId(currentSession.id);
-
       try {
         const data = await getMyMazes();
         setUserMazes(data || []);
+
+        // Only auto-select if we have a session AND that maze exists in the user's data
+        const currentSession = await loadGenerateSession();
+        if (
+          currentSession &&
+          data?.some((m: any) => m.id === currentSession.id)
+        ) {
+          setSelectedMazeId(currentSession.id);
+        }
       } catch (err) {
         console.error("MAZE_FETCH_FAILED", err);
       }
@@ -45,7 +54,7 @@ export default function NewPost() {
       const success = await createPost({
         title: formData.get("title") as string,
         content: formData.get("content") as string,
-        maze_id: selectedMazeId,
+        maze_id: selectedMazeId || undefined, // Send undefined if empty string
       });
 
       if (success) router.push("/forum");
@@ -57,7 +66,7 @@ export default function NewPost() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto pb-20">
+    <div className="max-w-3xl mx-auto pb-20 pt-10">
       <h1 className="text-3xl font-black uppercase tracking-tighter mb-8 italic">
         INITIALIZE_THREAD
       </h1>
@@ -90,12 +99,13 @@ export default function NewPost() {
 
         <div className="space-y-2">
           <label className="block text-[10px] font-black uppercase opacity-40">
-            Attach_Matrix_Reference
+            Attach_Maze_Reference (Optional)
           </label>
 
-          {/* Side-by-side Selection and Thumbnail */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full md:h-40">
-            <div className="md:col-span-2 border-4 border-black bg-zinc-50 flex flex-col justify-between">
+            <div
+              className={`md:col-span-2 border-4 border-black flex flex-col justify-between transition-colors ${selectedMazeId ? "bg-white" : "bg-zinc-100"}`}
+            >
               <select
                 value={selectedMazeId}
                 onChange={(e) => setSelectedMazeId(e.target.value)}
@@ -110,15 +120,16 @@ export default function NewPost() {
                 ))}
               </select>
 
+              {/* Only show the status bar if a valid ID is selected */}
               {selectedMazeId && (
-                <div className="border-t-2 border-black p-2 bg-white flex items-center justify-between shrink-0">
-                  <span className="text-[9px] font-black uppercase text-green-600">
-                    READY_FOR_LINKING
+                <div className="border-t-2 border-black p-2 bg-black flex items-center justify-between shrink-0">
+                  <span className="text-[9px] font-black uppercase text-white">
+                    MAZE_LINKED: {selectedMazeId}
                   </span>
                   <button
                     type="button"
                     onClick={() => setSelectedMazeId("")}
-                    className="text-[9px] font-black uppercase underline hover:text-red-600 transition-colors"
+                    className="text-[9px] font-black uppercase text-white underline hover:text-red-400 transition-colors"
                   >
                     Detach
                   </button>
@@ -126,8 +137,7 @@ export default function NewPost() {
               )}
             </div>
 
-            {/* Thumbnail Preview Area */}
-            <div className="border-4 border-black bg-white flex items-center justify-center relative overflow-hidden group min-h-[150px] md:min-h-0">
+            <div className="border-4 border-black bg-white flex items-center justify-center relative overflow-hidden min-h-[150px] md:min-h-0">
               {selectedMaze?.thumbnail ? (
                 <img
                   src={selectedMaze.thumbnail}
@@ -136,7 +146,7 @@ export default function NewPost() {
                 />
               ) : (
                 <div className="text-[8px] font-black uppercase opacity-20 text-center p-4">
-                  NO_PREVIEW_AVAILABLE
+                  {selectedMazeId ? "PREVIEW_NOT_FOUND" : "NO_MAZE_SELECTED"}
                 </div>
               )}
             </div>

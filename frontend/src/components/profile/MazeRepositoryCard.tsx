@@ -21,7 +21,7 @@ export default function MazeRepositoryCard({
           >
             <div className="absolute inset-0 bg-white/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
               <span className="text-[10px] font-black uppercase tracking-widest z-10">
-                VIEW_MATRIX_{maze.id}
+                VIEW_MAZE_{maze.id}
               </span>
             </div>
           </div>

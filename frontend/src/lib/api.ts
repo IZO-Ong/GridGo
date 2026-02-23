@@ -64,7 +64,7 @@ export async function generateMaze(
   return res.json();
 }
 
-export async function renderMazeImage(mazeData: any): Promise<Blob> {
+export async function renderMazeImage(mazeData: Maze): Promise<Blob> {
   const response = await fetch(`${BASE_URL}/api/maze/render`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -79,7 +79,7 @@ export async function renderMazeImage(mazeData: any): Promise<Blob> {
   return response.blob();
 }
 
-export async function solveMaze(mazeData: any, algorithm: string) {
+export async function solveMaze(mazeData: Maze, algorithm: string) {
   const response = await fetch(`${BASE_URL}/api/maze/solve`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

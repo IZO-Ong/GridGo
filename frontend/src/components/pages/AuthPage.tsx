@@ -18,7 +18,7 @@ export default function AuthPage() {
   const router = useRouter();
 
   const [view, setView] = useState<"login" | "register" | "verify">("login");
-  // Store full registration data in case we need to resend
+  // store full registration data in case we need to resend
   const [formData, setFormData] = useState({
     email: "",
     username: "",
@@ -37,8 +37,6 @@ export default function AuthPage() {
         login(data.token, data.username);
         router.push("/");
       } else if (view === "register") {
-        // Save the full payload so resending actually works
-        // (your backend expects username/password in HandleRegister)
         setFormData({
           email: payload.email,
           username: payload.username,

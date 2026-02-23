@@ -11,7 +11,7 @@ import MazeCanvas from "@/components/maze/MazeCanvas";
 import GenerateControls from "@/components/maze/GenerateControls";
 import { useImageDimensions } from "@/hooks/useImageDimensions";
 import { useMazeGeneration } from "@/hooks/useMazeGeneration";
-import { MazeData } from "@/types";
+import { Maze } from "@/types";
 
 const ALGORITHMS = [
   { id: "image", label: "IMAGE_KRUSKAL" },
@@ -20,7 +20,7 @@ const ALGORITHMS = [
 ];
 
 export default function CreatePage() {
-  const [activeMaze, setActiveMaze] = useState<MazeData | null>(null);
+  const [activeMaze, setActiveMaze] = useState<Maze | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);
 
   const { loading, error, executeGeneration } = useMazeGeneration();

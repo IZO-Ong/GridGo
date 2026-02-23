@@ -27,17 +27,22 @@ func HandleCreatePost(w http.ResponseWriter, r *http.Request) {
         return
     }
 
+    // no mazes
+    if p.MazeID != nil && *p.MazeID == "" {
+        p.MazeID = nil
+    }
+
     p.ID = "P-" + uuid.New().String()[:12]
     p.CreatorID = userID
     p.CreatedAt = time.Now()
 
     if err := db.DB.Create(&p).Error; err != nil {
+        fmt.Println("GORM ERROR:", err) 
         http.Error(w, "DB_ERROR", 500)
         return
     }
     json.NewEncoder(w).Encode(p)
 }
-
 // HandleGetPosts supports infinite scroll via offset
 func HandleGetPosts(w http.ResponseWriter, r *http.Request) {
     offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))

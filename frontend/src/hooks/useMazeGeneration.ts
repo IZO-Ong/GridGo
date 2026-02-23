@@ -1,16 +1,16 @@
 "use client";
 import { useState } from "react";
 import { generateMaze } from "@/lib/api";
-import { MazeData } from "@/types";
+import { Maze } from "@/types";
 
 export function useMazeGeneration() {
-  const [maze, setMaze] = useState<MazeData | null>(null);
+  const [maze, setMaze] = useState<Maze | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const executeGeneration = async (
     formData: FormData
-  ): Promise<MazeData | null> => {
+  ): Promise<Maze | null> => {
     setLoading(true);
     setError(null);
 

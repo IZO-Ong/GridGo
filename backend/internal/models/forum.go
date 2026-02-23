@@ -8,7 +8,7 @@ type Post struct {
     ID        string     `gorm:"primaryKey" json:"id"`
     Title     string     `json:"title"`
     Content   string     `json:"content"`
-    MazeID    string     `json:"maze_id"` 
+    MazeID    *string    `json:"maze_id"` 
     Maze      Maze       `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"maze"`
     CreatorID string     `json:"creator_id"`
     Creator   User       `gorm:"foreignKey:CreatorID" json:"creator"`

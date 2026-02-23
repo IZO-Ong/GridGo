@@ -1,7 +1,7 @@
 "use client";
 import AlgorithmSelect from "@/components/maze/AlgorithmSelect";
 import GridDimensionsInput from "@/components/maze/GridDimensionsInput";
-import { MazeData } from "@/types";
+import { Maze } from "@/types";
 
 interface SolveControlsProps {
   mazeId: string;
@@ -14,7 +14,7 @@ interface SolveControlsProps {
   solveType: string;
   setSolveType: (type: string) => void;
   handleAction: () => void;
-  activeMaze: MazeData | null;
+  activeMaze: Maze | null;
   isSolving: boolean;
   isAnimating: boolean;
   algorithms: { id: string; label: string }[];

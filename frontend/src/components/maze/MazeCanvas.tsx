@@ -1,13 +1,13 @@
 "use client";
 import { useEffect, useRef, useState, useMemo } from "react";
-import { MazeData } from "@/types";
+import { Maze } from "@/types";
 import { useMazeCanvas } from "@/hooks/useMazeCanvas";
 import { renderMazeImage } from "@/lib/api";
 
 const PADDING = 800;
 
 interface MazeCanvasProps {
-  maze: MazeData;
+  maze: Maze;
   showSave?: boolean;
   showShare?: boolean;
   highlights?: [number, number][];
@@ -292,7 +292,7 @@ export default function MazeCanvas({
           ) : (
             <button
               onClick={handleShare}
-              title="Share Matrix Link"
+              title="Share Maze Link"
               className="p-3 hover:bg-black hover:text-white transition-colors cursor-pointer"
             >
               <svg
