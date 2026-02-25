@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import ForumCard from "@/components/forum/ForumCard";
 import MazeRepositoryCard from "@/components/profile/MazeRepositoryCard";
+import DeleteModal from "@/components/modal/DeleteModal";
 import {
   getProfile,
   deleteMaze as apiDeleteMaze,
@@ -22,6 +23,13 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>("mazes");
 
+  // State to track the item pending deletion
+  const [pendingDelete, setPendingDelete] = useState<{
+    id: string;
+    type: TabType;
+    apiCall: (id: string) => Promise<boolean>;
+  } | null>(null);
+
   const isOwner = currentUser === username;
 
   useEffect(() => {
@@ -33,18 +41,18 @@ export default function ProfilePage() {
       .catch(() => setLoading(false));
   }, [username]);
 
-  const performDelete = async (
+  const performDelete = (
     id: string,
     type: TabType,
     apiCall: (id: string) => Promise<boolean>
   ) => {
-    if (
-      !confirm(
-        `CRITICAL: Purge this ${type.slice(0, -1)}? This action is irreversible.`
-      )
-    )
-      return;
+    setPendingDelete({ id, type, apiCall });
+  };
 
+  const executeDelete = async () => {
+    if (!pendingDelete) return;
+
+    const { id, type, apiCall } = pendingDelete;
     const success = await apiCall(id);
 
     if (success) {
@@ -88,6 +96,7 @@ export default function ProfilePage() {
         };
       });
     }
+    setPendingDelete(null);
   };
 
   const handlePostVoteUpdate = (
@@ -197,6 +206,15 @@ export default function ProfilePage() {
           </div>
         )}
       </div>
+
+      {/* Custom Delete Confirmation Modal Injection */}
+      {pendingDelete && (
+        <DeleteModal
+          type={pendingDelete.type.slice(0, -1)}
+          onConfirm={executeDelete}
+          onCancel={() => setPendingDelete(null)}
+        />
+      )}
     </div>
   );
 }

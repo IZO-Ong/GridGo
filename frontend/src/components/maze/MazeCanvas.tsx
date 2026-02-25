@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, useMemo } from "react";
 import { Maze } from "@/types";
 import { useMazeCanvas } from "@/hooks/useMazeCanvas";
 import { renderMazeImage } from "@/lib/api";
-import ShareModal from "@/components/layout/ShareModal";
+import ShareModal from "@/components/modal/ShareModal";
 
 const PADDING = 800;
 
