@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, useMemo } from "react";
 import { Maze } from "@/types";
 import { useMazeCanvas } from "@/hooks/useMazeCanvas";
 import { renderMazeImage } from "@/lib/api";
+import ShareModal from "@/components/layout/ShareModal";
 
 const PADDING = 800;
 
@@ -32,6 +33,7 @@ export default function MazeCanvas({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [visibleHighlights, setVisibleHighlights] = useState<number>(0);
   const [visibleSolutionStep, setVisibleSolutionStep] = useState(0);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   const {
     containerRef,
@@ -67,9 +69,7 @@ export default function MazeCanvas({
 
   const handleShare = () => {
     if (!maze.id) return;
-    const url = `${window.location.origin}/solve?id=${maze.id}`;
-    navigator.clipboard.writeText(url);
-    alert("ACCESS_LINK_COPIED_TO_CLIPBOARD");
+    setIsShareModalOpen(true);
   };
 
   useEffect(() => {
@@ -265,6 +265,13 @@ export default function MazeCanvas({
           />
         </div>
       </div>
+
+      {isShareModalOpen && (
+        <ShareModal
+          url={`${process.env.NEXT_PUBLIC_FRONTEND_URL || window.location.origin}/solve?id=${maze.id}`}
+          onClose={() => setIsShareModalOpen(false)}
+        />
+      )}
 
       {(showSave || showShare) && (
         <div className="absolute bottom-6 left-6 border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] z-30">
