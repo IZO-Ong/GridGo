@@ -1,3 +1,5 @@
+// Package maze provides the core data structures and logic for maze generation,
+// spatial analysis, and pathfinding.
 package maze
 
 import (
@@ -10,14 +12,14 @@ import (
 // It serves as the primary state container for both generation
 // and rendering logic.
 type Maze struct {
-    ID         string         `json:"id"`
-    Rows       int            `json:"rows"`
-    Cols       int            `json:"cols"`
-    Start      [2]int         `json:"start"`
-    End        [2]int         `json:"end"`
-    Grid       [][]Cell       `json:"grid"`
-    Weights    map[string]int `json:"weights"`
-    Complexity float64        `json:"complexity"`
+	ID         string         `json:"id"`
+	Rows       int            `json:"rows"`
+	Cols       int            `json:"cols"`
+	Start      [2]int         `json:"start"`      // [row, col]
+	End        [2]int         `json:"end"`        // [row, col]
+	Grid       [][]Cell       `json:"grid"`       // The physical layout of cells and walls
+	Weights    map[string]int `json:"weights"`    // Serialized weights for persistence/rendering
+	Complexity float64        `json:"complexity"` // Calculated difficulty score
 }
 
 // Cell represents a single coordinate in the maze.
@@ -26,20 +28,21 @@ type Maze struct {
 type Cell struct {
 	Row         int     `json:"row"`
 	Col         int     `json:"col"`
-	Visited     bool    `json:"visited"`
-	Walls       [4]bool `json:"walls"`        // 0:Top, 1:Right, 2:Bottom, 3:Left
-	WallWeights [4]int  `json:"wall_weights"`
+	Visited     bool    `json:"visited"`      // Used primarily during generation algorithms
+	Walls       [4]bool `json:"walls"`        // Clockwise: 0:Top, 1:Right, 2:Bottom, 3:Left
+	WallWeights [4]int  `json:"wall_weights"` // Visual/Difficulty weight of each wall
 }
 
-// Fun statistics on mazes
+// MazeStats provides quantitative insights into the maze's topological properties.
 type MazeStats struct {
-    DeadEnds      int     `json:"dead_ends"`
-    Junctions     int     `json:"junctions"`
-    StraightWays  int     `json:"straight_ways"`
-    Complexity    float64 `json:"complexity"`
+	DeadEnds     int     `json:"dead_ends"`     // Cells with only 1 exit
+	Junctions    int     `json:"junctions"`    // Cells with 3 or 4 exits (branching points)
+	StraightWays int     `json:"straight_ways"` // Cells with 2 exits
+	Complexity   float64 `json:"complexity"`    // Weighted score of branching vs size
 }
 
-// SetManualStartEnd allows specific placement of entrance/exit
+// SetManualStartEnd allows specific placement of entrance/exit.
+// Start and End points are automatically "clipped" (walls removed) to allow entry.
 func (m *Maze) SetManualStartEnd(sr, sc, er, ec int) error {
 	isBorder := func(r, c int) bool {
 		return r == 0 || r == m.Rows-1 || c == 0 || c == m.Cols-1
@@ -58,8 +61,10 @@ func (m *Maze) SetManualStartEnd(sr, sc, er, ec int) error {
 }
 
 // SetRandomStartEnd picks two unique points on the maze boundary.
+// It ensures a minimum Manhattan distance to prevent the start and end 
+// from being too close to each other.
 func (m *Maze) SetRandomStartEnd() {
-	// Manhattan distance threshold (at least 50% of max)
+	// Manhattan distance threshold: Ensure start/end are across at least 50% of the grid.
 	minDist := float64(m.Rows+m.Cols) * 0.5
 
 	for {
@@ -78,36 +83,30 @@ func (m *Maze) SetRandomStartEnd() {
 	m.clipBorderWall(m.End[0], m.End[1])
 }
 
+// getRandomBorderPoint returns coordinates on one of the four outer edges.
 func (m *Maze) getRandomBorderPoint() (int, int) {
 	side := rand.IntN(4)
 	switch side {
-	case 0:
+	case 0: // Top edge
 		return 0, rand.IntN(m.Cols)
-	case 1:
+	case 1: // Right edge
 		return rand.IntN(m.Rows), m.Cols - 1
-	case 2:
+	case 2: // Bottom edge
 		return m.Rows - 1, rand.IntN(m.Cols)
-	default:
+	default: // Left edge
 		return rand.IntN(m.Rows), 0
 	}
 }
 
+// clipBorderWall removes the outer-facing wall of a border cell to create an entrance/exit.
 func (m *Maze) clipBorderWall(r, c int) {
-	if r == 0 {
-		m.Grid[r][c].Walls[0] = false
-	}
-	if r == m.Rows-1 {
-		m.Grid[r][c].Walls[2] = false
-	}
-	if c == 0 {
-		m.Grid[r][c].Walls[3] = false
-	}
-	if c == m.Cols-1 {
-		m.Grid[r][c].Walls[1] = false
-	}
+	if r == 0 { m.Grid[r][c].Walls[0] = false }
+	if r == m.Rows-1 { m.Grid[r][c].Walls[2] = false }
+	if c == 0 { m.Grid[r][c].Walls[3] = false }
+	if c == m.Cols-1 { m.Grid[r][c].Walls[1] = false }
 }
 
-// NewMaze initializes a grid where every cell is completely enclosed.
+// NewMaze initializes a grid where every cell is completely enclosed (all walls = true).
 func NewMaze(rows, cols int) *Maze {
 	grid := make([][]Cell, rows)
 
@@ -126,73 +125,32 @@ func NewMaze(rows, cols int) *Maze {
 	return &Maze{Rows: rows, Cols: cols, Grid: grid}
 }
 
-// Print outputs a rough ASCII representation of the maze to the terminal.
-func (m *Maze) Print() {
-	for r := range m.Rows {
-		for c := range m.Cols {
-			if m.Grid[r][c].Walls[0] {
-				fmt.Print("+---")
-			} else {
-				fmt.Print("+   ")
-			}
-		}
-		fmt.Println("+")
-
-		for c := range m.Cols {
-			if m.Grid[r][c].Walls[3] {
-				fmt.Print("|")
-			} else {
-				fmt.Print(" ")
-			}
-
-			// markers
-			if r == m.Start[0] && c == m.Start[1] {
-				fmt.Print(" * ")
-			} else if r == m.End[0] && c == m.End[1] {
-				fmt.Print(" - ")
-			} else {
-				fmt.Print("   ")
-			}
-		}
-		fmt.Println("|")
-	}
-
-	// closing bottom edge for grid
-	for c := range m.Cols {
-		if m.Grid[m.Rows-1][c].Walls[2] {
-			fmt.Print("+---")
-		} else {
-			fmt.Print("+   ")
-		}
-	}
-	fmt.Println("+")
-}
-
 // RemoveWalls breaks the boundaries between two adjacent cells.
+// It handles both horizontal and vertical adjacency.
 func (m *Maze) RemoveWalls(r1, c1, r2, c2 int) {
 	if r1 == r2 {
 		// Horizontal neighbors
 		if c1 < c2 {
-			m.Grid[r1][c1].Walls[1] = false // Right
-			m.Grid[r2][c2].Walls[3] = false // Left
+			m.Grid[r1][c1].Walls[1] = false // Current Right
+			m.Grid[r2][c2].Walls[3] = false // Target Left
 		} else {
-			m.Grid[r1][c1].Walls[3] = false // Left
-			m.Grid[r2][c2].Walls[1] = false // Right
+			m.Grid[r1][c1].Walls[3] = false // Current Left
+			m.Grid[r2][c2].Walls[1] = false // Target Right
 		}
 	} else {
 		// Vertical neighbors
 		if r1 < r2 {
-			m.Grid[r1][c1].Walls[2] = false // Bottom
-			m.Grid[r2][c2].Walls[0] = false // Top
+			m.Grid[r1][c1].Walls[2] = false // Current Bottom
+			m.Grid[r2][c2].Walls[0] = false // Target Top
 		} else {
-			m.Grid[r1][c1].Walls[0] = false // Top
-			m.Grid[r2][c2].Walls[2] = false // Bottom
+			m.Grid[r1][c1].Walls[0] = false // Current Top
+			m.Grid[r2][c2].Walls[2] = false // Target Bottom
 		}
 	}
 }
 
-// GetNeighbors returns a slice of adjacent points that can be reached from 
-// the current point (i.e., they are within bounds and not blocked by a wall).
+// GetNeighbors returns a slice of adjacent points that can be reached.
+// A point is a neighbor only if there is no wall between it and the current point.
 func (m *Maze) GetNeighbors(p Point) []Point {
 	neighbors := []Point{}
 	r, c := p[0], p[1]
@@ -209,6 +167,7 @@ func (m *Maze) GetNeighbors(p Point) []Point {
 		wallIdx := d[2]
 
 		if nr >= 0 && nr < m.Rows && nc >= 0 && nc < m.Cols {
+			// Check the specific wall index for the direction of movement
 			if !m.Grid[r][c].Walls[wallIdx] {
 				neighbors = append(neighbors, Point{nr, nc})
 			}
@@ -218,75 +177,73 @@ func (m *Maze) GetNeighbors(p Point) []Point {
 	return neighbors
 }
 
-// CalculateStats calculates statistics of mazes, specifically
-// deadends, straightways, complexity, and junctions
+// CalculateStats evaluates the maze's difficulty by analyzing junctions and dead ends.
+// Complexity Heuristic: (Branching Factor * log2(TotalCells)).
 func (m *Maze) CalculateStats() MazeStats {
-    stats := MazeStats{}
-    totalCells := float64(m.Rows * m.Cols)
+	stats := MazeStats{}
+	totalCells := float64(m.Rows * m.Cols)
 
-    for r := 0; r < m.Rows; r++ {
-        for c := 0; c < m.Cols; c++ {
-            openCount := 0
-            for _, isWall := range m.Grid[r][c].Walls {
-                if !isWall {
-                    openCount++
-                }
-            }
+	for r := range m.Rows {
+		for c := range m.Cols {
+			openCount := 0
+			for _, isWall := range m.Grid[r][c].Walls {
+				if !isWall { openCount++ }
+			}
 
-            switch openCount {
-            case 1:
-                stats.DeadEnds++
-            case 2:
-                stats.StraightWays++
-            case 3, 4:
-                stats.Junctions++
-            }
-        }
-    }
+			switch openCount {
+			case 1: stats.DeadEnds++
+			case 2: stats.StraightWays++
+			case 3, 4: stats.Junctions++
+			}
+		}
+	}
 	
-    if totalCells > 0 {
-        branchingFactor := (float64(stats.Junctions)*2.0 + float64(stats.DeadEnds)) / totalCells
-        scaleBonus := math.Log2(totalCells)
-        
-        stats.Complexity = branchingFactor * scaleBonus
-    }
+	if totalCells > 0 {
+		// Branching factor represents how many choices a user has on average.
+		branchingFactor := (float64(stats.Junctions)*2.0 + float64(stats.DeadEnds)) / totalCells
+		scaleBonus := math.Log2(totalCells)
+		
+		stats.Complexity = branchingFactor * scaleBonus
+	}
 
-    return stats
+	return stats
 }
 
+// SyncGridToWeights flattens the 2D grid wall data into a 1D map of string keys.
+// This is used for JSON serialization and database storage.
 func (m *Maze) SyncGridToWeights(original map[string]int) {
-    m.Weights = make(map[string]int)
-    for r := 0; r < m.Rows; r++ {
-        for c := 0; c < m.Cols; c++ {
-            
-            keyTop := fmt.Sprintf("%d-%d-top", r, c)
-            m.Weights[keyTop] = m.getWeightForWall(r, c, 0, keyTop, original)
+	m.Weights = make(map[string]int)
+	for r := range m.Rows {
+		for c := range m.Cols {
+			keyTop := fmt.Sprintf("%d-%d-top", r, c)
+			m.Weights[keyTop] = m.getWeightForWall(r, c, 0, keyTop, original)
 
-            keyLeft := fmt.Sprintf("%d-%d-left", r, c)
-            m.Weights[keyLeft] = m.getWeightForWall(r, c, 3, keyLeft, original)
+			keyLeft := fmt.Sprintf("%d-%d-left", r, c)
+			m.Weights[keyLeft] = m.getWeightForWall(r, c, 3, keyLeft, original)
 
-            if r == m.Rows-1 {
-                keyBottom := fmt.Sprintf("%d-%d-bottom", r, c)
-                m.Weights[keyBottom] = m.getWeightForWall(r, c, 2, keyBottom, original)
-            }
-
-            if c == m.Cols-1 {
-                keyRight := fmt.Sprintf("%d-%d-right", r, c)
-                m.Weights[keyRight] = m.getWeightForWall(r, c, 1, keyRight, original)
-            }
-        }
-    }
+			// Bottom and Right are only tracked for border edges to prevent redundancy
+			if r == m.Rows-1 {
+				keyBottom := fmt.Sprintf("%d-%d-bottom", r, c)
+				m.Weights[keyBottom] = m.getWeightForWall(r, c, 2, keyBottom, original)
+			}
+			if c == m.Cols-1 {
+				keyRight := fmt.Sprintf("%d-%d-right", r, c)
+				m.Weights[keyRight] = m.getWeightForWall(r, c, 1, keyRight, original)
+			}
+		}
+	}
 }
 
+// getWeightForWall determines the numeric weight of a wall (0 for paths, 120-255 for walls).
 func (m *Maze) getWeightForWall(r, c, wallIdx int, key string, original map[string]int) int {
-    if !m.Grid[r][c].Walls[wallIdx] {
-        return 0 // Path
-    }
-    if val, ok := original[key]; ok {
-        return val
-    }
-    if original != nil {
-        return 120 
-    }
-    return 255
+	if !m.Grid[r][c].Walls[wallIdx] {
+		return 0 // Path (Weight 0)
+	}
+	if val, ok := original[key]; ok {
+		return val
+	}
+	if original != nil {
+		return 120 // Default wall weight for image-based mazes
+	}
+	return 255 // Absolute wall weight
 }

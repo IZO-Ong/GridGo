@@ -1,6 +1,6 @@
 package maze
 
-// DSU (Disjoint Set Union) provides efficient tracking of
+// DSU (Disjoint Set Union) provides tracking of
 // connected components in the maze grid for kruskal algorithm
 type DSU struct {
 	parent []int

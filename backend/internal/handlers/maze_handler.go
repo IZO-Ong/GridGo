@@ -1,3 +1,5 @@
+// Package handlers contains the HTTP logic for the GridGo API.
+// This file manages Maze lifecycle of generation, persistence, solving and rendering.
 package handlers
 
 import (
@@ -13,12 +15,14 @@ import (
 	"github.com/IZO-Ong/gridgo/internal/utils"
 )
 
+// HandleGenerateMaze creates a new maze grid based on the requested algorithm.
 func HandleGenerateMaze(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
+	// Limit form size to 10MB
 	r.ParseMultipartForm(10 << 20)
 	rows, _ := strconv.Atoi(r.FormValue("rows"))
 	cols, _ := strconv.Atoi(r.FormValue("cols"))
@@ -29,17 +33,21 @@ func HandleGenerateMaze(w http.ResponseWriter, r *http.Request) {
 
 	switch genType {
 	case "image":
+		// Extract weights from image luminance/contrast
 		file, _, _ := r.FormFile("image")
-		defer file.Close()
-		weights, _ := maze.GetEdgeWeights(file, rows, cols)
-		originalWeights = weights
-		myMaze.GenerateImageMaze(weights)
+		if file != nil {
+			defer file.Close()
+			weights, _ := maze.GetEdgeWeights(file, rows, cols)
+			originalWeights = weights
+			myMaze.GenerateImageMaze(weights)
+		}
 	case "kruskal":
 		myMaze.GenerateKruskal()
 	case "recursive":
 		myMaze.GenerateRecursive(0, 0)
 	}
 
+	// Finalize maze state and calculate difficulty metrics
 	myMaze.SyncGridToWeights(originalWeights)
 	myMaze.SetRandomStartEnd()
 	
@@ -49,6 +57,7 @@ func HandleGenerateMaze(w http.ResponseWriter, r *http.Request) {
 
 	userID := middleware.GetUserID(r)
 	
+	// Prepare DB model
 	dbMaze := models.Maze{
 		ID:          mazeID, 
 		WeightsJSON: string(weightsBytes),
@@ -61,6 +70,7 @@ func HandleGenerateMaze(w http.ResponseWriter, r *http.Request) {
 		Complexity:  stats.Complexity, 
 	}
 
+	// Associate with user if authenticated
 	if userID != "" { dbMaze.CreatorID = &userID }
 
 	db.DB.Create(&dbMaze)
@@ -68,20 +78,23 @@ func HandleGenerateMaze(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(myMaze)
 }
 
+// HandleRenderMaze takes a maze structure and returns a binary PNG image.
 func HandleRenderMaze(w http.ResponseWriter, r *http.Request) {
-    w.Header().Set("Access-Control-Allow-Origin", "*")
-    if r.Method == http.MethodOptions { return }
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	if r.Method == http.MethodOptions { return }
 
-    var m maze.Maze
-    if err := json.NewDecoder(r.Body).Decode(&m); err != nil {
-        http.Error(w, "Invalid data", http.StatusBadRequest)
-        return
-    }
+	var m maze.Maze
+	if err := json.NewDecoder(r.Body).Decode(&m); err != nil {
+		http.Error(w, "Invalid data", http.StatusBadRequest)
+		return
+	}
 
-    w.Header().Set("Content-Type", "image/png")
-    m.RenderToWriter(w, 10) 
+	w.Header().Set("Content-Type", "image/png")
+	m.RenderToWriter(w, 10)
 }
 
+// HandleSolveMaze accepts a maze and an algorithm name, then returns 
+// the computed path and the list of cells visited during the search.
 func HandleSolveMaze(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodOptions { return }
 	if r.Method != http.MethodPost {
@@ -102,13 +115,14 @@ func HandleSolveMaze(w http.ResponseWriter, r *http.Request) {
 	var visited [][2]int
 	var path [][2]int
 
+	// Route to algorithm implementation in maze package
 	switch payload.Algorithm {
 	case "astar":
 		visited, path = payload.Maze.SolveAStar()
 	case "bfs":
 		visited, path = payload.Maze.SolveBFS()
 	case "greedy":
-    	visited, path = payload.Maze.SolveGreedy()
+		visited, path = payload.Maze.SolveGreedy()
 	default:
 		http.Error(w, "Unsupported algorithm", http.StatusBadRequest)
 		return
@@ -121,6 +135,8 @@ func HandleSolveMaze(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// HandleGetMaze retrieves a maze by ID and reconstructs its full grid 
+// object from the stored JSON weights.
 func HandleGetMaze(w http.ResponseWriter, r *http.Request) {
 	mazeID := r.URL.Query().Get("id")
 	var m models.Maze
@@ -132,11 +148,13 @@ func HandleGetMaze(w http.ResponseWriter, r *http.Request) {
 	var savedWeights map[string]int
 	json.Unmarshal([]byte(m.WeightsJSON), &savedWeights)
 
+	// Reinflate the grid structure
 	reconstructed := maze.NewMaze(m.Rows, m.Cols)
 	reconstructed.GenerateImageMaze(savedWeights)
 
-	for r := 0; r < m.Rows; r++ {
-		for c := 0; c < m.Cols; c++ {
+	// Mapping of weights back into  cell structs
+	for r := range m.Rows {
+		for c := range m.Cols {
 			if v, ok := savedWeights[fmt.Sprintf("%d-%d-top", r, c)]; ok { reconstructed.Grid[r][c].WallWeights[0] = v }
 			if v, ok := savedWeights[fmt.Sprintf("%d-%d-right", r, c)]; ok { reconstructed.Grid[r][c].WallWeights[1] = v }
 			if v, ok := savedWeights[fmt.Sprintf("%d-%d-bottom", r, c)]; ok { reconstructed.Grid[r][c].WallWeights[2] = v }
@@ -151,51 +169,54 @@ func HandleGetMaze(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// HandleGetMyMazes returns a list of all mazes created by the current user.
 func HandleGetMyMazes(w http.ResponseWriter, r *http.Request) {
-    userID := middleware.GetUserID(r)
-    if userID == "" {
-        http.Error(w, "AUTH_REQUIRED", 401)
-        return
-    }
+	userID := middleware.GetUserID(r)
+	if userID == "" {
+		http.Error(w, "AUTH_REQUIRED", 401)
+		return
+	}
 
-    var mazes []models.Maze
-    db.DB.Where("creator_id = ?", userID).Order("created_at desc").Find(&mazes)
-    
-    json.NewEncoder(w).Encode(mazes)
+	var mazes []models.Maze
+	db.DB.Where("creator_id = ?", userID).Order("created_at desc").Find(&mazes)
+	
+	json.NewEncoder(w).Encode(mazes)
 }
 
+// HandleDeleteMaze removes a maze, with authorization check for ownership.
 func HandleDeleteMaze(w http.ResponseWriter, r *http.Request) {
-    if r.Method != http.MethodDelete { return }
-    
-    mazeID := r.URL.Query().Get("id")
-    userID := middleware.GetUserID(r)
+	if r.Method != http.MethodDelete { return }
+	
+	mazeID := r.URL.Query().Get("id")
+	userID := middleware.GetUserID(r)
 
-    result := db.DB.Where("id = ? AND creator_id = ?", mazeID, userID).Delete(&models.Maze{})
-    
-    if result.RowsAffected == 0 {
-        http.Error(w, "UNAUTHORIZED_OR_NOT_FOUND", 403)
-        return
-    }
-    w.WriteHeader(http.StatusOK)
+	result := db.DB.Where("id = ? AND creator_id = ?", mazeID, userID).Delete(&models.Maze{})
+	
+	if result.RowsAffected == 0 {
+		http.Error(w, "UNAUTHORIZED_OR_NOT_FOUND", 403)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }
 
+// HandleUpdateThumbnail saves a base64 or URL thumbnail for the maze gallery.
 func HandleUpdateThumbnail(w http.ResponseWriter, r *http.Request) {
-    if r.Method != http.MethodPut {
-        http.Error(w, "Method not allowed", 405)
-        return
-    }
+	if r.Method != http.MethodPut {
+		http.Error(w, "Method not allowed", 405)
+		return
+	}
 
-    var payload struct {
-        ID        string `json:"id"`
-        Thumbnail string `json:"thumbnail"`
-    }
-    json.NewDecoder(r.Body).Decode(&payload)
+	var payload struct {
+		ID        string `json:"id"`
+		Thumbnail string `json:"thumbnail"`
+	}
+	json.NewDecoder(r.Body).Decode(&payload)
 
-    result := db.DB.Model(&models.Maze{}).Where("id = ?", payload.ID).Update("thumbnail", payload.Thumbnail)
-    
-    if result.Error != nil {
-        http.Error(w, "DB_UPDATE_FAILED", 500)
-        return
-    }
-    w.WriteHeader(http.StatusOK)
+	result := db.DB.Model(&models.Maze{}).Where("id = ?", payload.ID).Update("thumbnail", payload.Thumbnail)
+	
+	if result.Error != nil {
+		http.Error(w, "DB_UPDATE_FAILED", 500)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }

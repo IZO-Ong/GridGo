@@ -1,3 +1,5 @@
+// Package maze provides maze manipulation and pathfinding logic.
+// This file implements the search algorithms used to solve the generated grids.
 package maze
 
 import (
@@ -5,18 +7,20 @@ import (
 	"math"
 )
 
+// Point is an alias for [row, col] coordinates used in pathfinding.
 type Point [2]int
 
-// Priority Queue for A*
+// Item represents a node within the Priority Queue.
 type Item struct {
 	point    Point
 	priority int
 	index    int
 }
 
+// PriorityQueue implements heap.Interface and holds Items.
 type PriorityQueue []*Item
 
-func (pq PriorityQueue) Len() int { return len(pq) }
+func (pq PriorityQueue) Len() int           { return len(pq) }
 func (pq PriorityQueue) Less(i, j int) bool { return pq[i].priority < pq[j].priority }
 func (pq PriorityQueue) Swap(i, j int) {
 	pq[i], pq[j] = pq[j], pq[i]
@@ -38,7 +42,9 @@ func (pq *PriorityQueue) Pop() interface{} {
 	return item
 }
 
-// SolveAStar uses Manhattan Heuristic
+// SolveAStar implements the A* search algorithm. 
+// It combines the actual distance from the start (gScore) with a heuristic 
+// estimate to the end (Manhattan distance) to find the shortest path efficiently.
 func (m *Maze) SolveAStar() ([][2]int, [][2]int) {
 	start, end := Point{m.Start[0], m.Start[1]}, Point{m.End[0], m.End[1]}
 	visited, cameFrom, gScore := [][2]int{}, make(map[Point]Point), make(map[Point]int)
@@ -59,6 +65,7 @@ func (m *Maze) SolveAStar() ([][2]int, [][2]int) {
 			if val, ok := gScore[next]; !ok || tentativeG < val {
 				cameFrom[next] = curr
 				gScore[next] = tentativeG
+				// f(n) = g(n) + h(n)
 				fScore := tentativeG + m.manhattan(next, end)
 				heap.Push(pq, &Item{point: next, priority: fScore})
 			}
@@ -67,7 +74,8 @@ func (m *Maze) SolveAStar() ([][2]int, [][2]int) {
 	return visited, nil
 }
 
-// SolveBFS for shortest path in unweighted grid
+// SolveBFS implements Breadth-First Search.
+// It explores the maze layer by layer. In an unweighted grid (like most mazes), 
 func (m *Maze) SolveBFS() ([][2]int, [][2]int) {
 	start, end := Point{m.Start[0], m.Start[1]}, Point{m.End[0], m.End[1]}
 	visited, queue, cameFrom := [][2]int{}, []Point{start}, make(map[Point]Point)
@@ -89,6 +97,8 @@ func (m *Maze) SolveBFS() ([][2]int, [][2]int) {
 	return visited, nil
 }
 
+// SolveGreedy implements Greedy Best-First Search.
+// It always moves toward the cell that is geographically closest to the exit. 
 func (m *Maze) SolveGreedy() ([][2]int, [][2]int) {
 	start, end := Point{m.Start[0], m.Start[1]}, Point{m.End[0], m.End[1]}
 	visited, cameFrom := [][2]int{}, make(map[Point]Point)
@@ -96,7 +106,7 @@ func (m *Maze) SolveGreedy() ([][2]int, [][2]int) {
 
 	pq := &PriorityQueue{}
 	heap.Init(pq)
-	// Initial priority is just the distance to the end
+	// Priority is purely h(n) (distance to end)
 	heap.Push(pq, &Item{point: start, priority: m.manhattan(start, end)})
 
 	for pq.Len() > 0 {
@@ -119,15 +129,21 @@ func (m *Maze) SolveGreedy() ([][2]int, [][2]int) {
 	return visited, [][2]int{}
 }
 
+// manhattan calculates the L1 distance between two points.
 func (m *Maze) manhattan(p1, p2 Point) int {
 	return int(math.Abs(float64(p1[0]-p2[0])) + math.Abs(float64(p1[1]-p2[1])))
 }
 
+// reconstructPath backtracks through the cameFrom map to build the final route.
 func (m *Maze) reconstructPath(cameFrom map[Point]Point, current Point) [][2]int {
 	path := [][2]int{}
 	for {
 		path = append([][2]int{{current[0], current[1]}}, path...)
-		if p, ok := cameFrom[current]; ok { current = p } else { break }
+		if p, ok := cameFrom[current]; ok { 
+			current = p 
+		} else { 
+			break 
+		}
 	}
 	return path
 }
