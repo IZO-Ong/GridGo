@@ -1,11 +1,13 @@
 "use client";
+import React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
 export default function NavBar() {
   const { user, logout } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
 
   const navItems = [
     { label: "Create", href: "/" },
@@ -13,33 +15,42 @@ export default function NavBar() {
     { label: "Forum", href: "/forum" },
   ];
 
-  const handleLogout = () => {
+  const handleLogout = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
     logout();
   };
 
   return (
     <div className="flex items-center gap-6">
       <div className="flex items-center gap-3">
-        <Link
-          href={user ? `/profile/${user}` : "/login"}
-          className="flex items-center gap-3 group h-10"
-        >
-          {/* Avatar */}
-          <div
-            className={`w-10 h-10 border-2 border-black rounded-full flex items-center justify-center shrink-0 transition-colors ${
-              user ? "bg-black text-white" : "group-hover:bg-zinc-100"
-            }`}
+        {/* Main wrapper for the identity section */}
+        <div className="flex items-center gap-3 h-10">
+          {/* 1. Circle Avatar Link */}
+          <Link
+            href={user ? `/profile/${user}` : "/login"}
+            className="flex items-center shrink-0"
           >
-            <span className="text-xs font-black">
-              {user ? user[0].toUpperCase() : "G"}
-            </span>
-          </div>
+            <div
+              className={`w-10 h-10 border-2 border-black rounded-full flex items-center justify-center transition-colors ${
+                user ? "bg-black text-white" : "hover:bg-zinc-100"
+              }`}
+            >
+              <span className="text-xs font-black">
+                {user ? user[0].toUpperCase() : "G"}
+              </span>
+            </div>
+          </Link>
 
-          {/* User Info & Actions */}
+          {/* 2. Vertical Container for Name (Link) and Logout (Button) */}
           <div className="flex flex-col justify-center">
-            <span className="text-[11px] font-black uppercase tracking-tighter leading-none">
+            {/* The Link now ONLY wraps the Username text */}
+            <Link
+              href={user ? `/profile/${user}` : "/login"}
+              className="text-[11px] font-black uppercase tracking-tighter leading-none hover:underline"
+            >
               {user ? user : "Guest"}
-            </span>
+            </Link>
 
             {user ? (
               <button
@@ -49,12 +60,15 @@ export default function NavBar() {
                 [Logout]
               </button>
             ) : (
-              <span className="text-[8px] font-mono opacity-40 uppercase tracking-tight mt-1">
-                Click to Sign In
-              </span>
+              <Link
+                href="/login"
+                className="text-[8px] font-mono opacity-40 hover:opacity-100 hover:underline text-left uppercase tracking-tight mt-1 transition-opacity"
+              >
+                [Sign In]
+              </Link>
             )}
           </div>
-        </Link>
+        </div>
       </div>
 
       {/* Main Nav Items */}

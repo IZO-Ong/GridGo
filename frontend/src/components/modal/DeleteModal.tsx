@@ -23,7 +23,6 @@ export default function DeleteModal({
             PURGE {type.toUpperCase()}?
           </h2>
 
-          {/* Custom X Button: Black bg, White X, Red on Hover */}
           <button
             onClick={onCancel}
             className="flex items-center justify-center w-8 h-8 bg-black text-white hover:bg-[#ef4444] border-2 border-black transition-colors"
@@ -52,7 +51,6 @@ export default function DeleteModal({
           </p>
         </div>
 
-        {/* Action Buttons with Neo-Brutalist Shadow and Click Animation */}
         <div className="flex flex-col gap-3">
           <button
             onClick={onConfirm}
