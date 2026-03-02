@@ -29,7 +29,7 @@ type User struct {
 type PendingUser struct {
 	Email        string    `gorm:"primaryKey"` // Email is the unique identifier for verification
 	Username     string    `gorm:"not null"`
-	PasswordHash string    `gorm:"not null"`
-	OTP          string    `gorm:"not null"`
+	PasswordHash string    `gorm:"not null" json:"-"`
+    OTP          string    `gorm:"not null" json:"-"`
 	ExpiresAt    time.Time `gorm:"not null"`
 }

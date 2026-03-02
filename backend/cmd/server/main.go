@@ -6,6 +6,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/IZO-Ong/gridgo/internal/auth"
 	"github.com/IZO-Ong/gridgo/internal/db"
@@ -79,7 +80,14 @@ func main() {
 	mux.HandleFunc("/api/auth/google", handlers.HandleOAuthLogin)
 	mux.HandleFunc("/api/auth/google/callback", handlers.HandleOAuthCallback)
 
-	// Start server with CORS middleware
-	log.Println("GridGo API online on :8080")
-	http.ListenAndServe(":8080", middleware.EnableCORS(mux))
+	port := os.Getenv("PORT")
+    if port == "" {
+        port = "8080"
+    }
+
+    log.Printf("GridGo API online on :%s", port)
+    
+    if err := http.ListenAndServe(":"+port, middleware.EnableCORS(mux)); err != nil {
+        log.Fatal("Server failed to start:", err)
+    }
 }
