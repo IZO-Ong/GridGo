@@ -72,7 +72,7 @@ func HandleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 
 	var dbUser models.User
 	// if user doesn't exist, create new record with placeholder password
-	if db.DB.Where("email = ?", user.Email).First(&dbUser).Error != nil {
+	if db.DB.Where("email = ?", user.Email).Find(&dbUser).Error != nil {
 		dbUser = models.User{Username: user.NickName, Email: user.Email, PasswordHash: "OAUTH_ACCOUNT"}
 		db.DB.Create(&dbUser)
 	}
@@ -104,7 +104,7 @@ func HandleRegister(w http.ResponseWriter, r *http.Request) {
 
 	// Check if a pending registration already exists
 	var pending models.PendingUser
-	err := db.DB.Where("email = ?", creds.Email).First(&pending).Error
+	err := db.DB.Where("email = ?", creds.Email).Find(&pending).Error
 
 	if err == nil {
 		if time.Now().Before(pending.ExpiresAt) {

@@ -35,14 +35,15 @@ func init() {
 // main initializes the core services and starts the HTTP server.
 func main() {
 	// Initialize persistent services
-	db.InitDB()    // Connects to the database
+	db.InitDB()    // Connects to postgres database
+	db.InitRedis() // Connects to redis
 	auth.NewAuth() // Sets up OAuth providers
 
 	// Create a new request multiplexer
 	mux := http.NewServeMux()
 
 	// --- Maze Endpoints ---
-	// Handles the creation, retrieval, and visualization of maze grids.
+	// Handles creation, retrieval and visualization of maze grids.
 	mux.HandleFunc("/api/maze/generate", middleware.OptionalAuth(handlers.HandleGenerateMaze))
 	mux.HandleFunc("/api/maze/get", handlers.HandleGetMaze)
 	mux.HandleFunc("/api/maze/my-mazes", middleware.RequireAuth(handlers.HandleGetMyMazes))

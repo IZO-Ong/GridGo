@@ -62,7 +62,6 @@ export default function ForumCard({
     <div className="relative group transition-all duration-200 hover:-translate-y-1">
       <div
         onClick={() => router.push(`/forum/post/${post.id}`)}
-        /* Changed h-48 to h-40 md:h-48 for a tighter mobile fit */
         className="flex h-40 md:h-48 border-4 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] group-hover:shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer overflow-hidden relative"
       >
         {/* VOTE SIDEBAR */}
