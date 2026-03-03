@@ -169,17 +169,19 @@ function SolveCore() {
         <div className="p-3 bg-red-50 border-2 border-red-600 text-red-600 font-bold uppercase text-[11px]">{`>> ${error}`}</div>
       )}
 
-      <section className="relative border-4 border-black h-[750px] bg-zinc-50 overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col">
-        <div className="h-7 border-b-2 border-black bg-white flex items-center px-3 justify-between z-30 shrink-0 uppercase text-[10px] font-bold">
+      {/* TIGHTER MOBILE: Use aspect ratio to reduce white space above canvas */}
+      <section className="relative border-4 border-black bg-zinc-50 overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col transition-all aspect-[4/5] sm:aspect-auto md:h-[750px]">
+        {/* Responsive header bar */}
+        <div className="min-h-7 py-1 md:py-0 border-b-2 border-black bg-white flex flex-wrap items-center px-3 justify-between z-30 shrink-0 uppercase text-[9px] md:text-[10px] font-bold gap-y-2">
           <div className="flex items-center gap-3">
             <span>SOLVER_OUTPUT</span>
             {activeMaze?.id && (
-              <span className="bg-black text-white px-2 py-0.5 text-[9px] font-black">
+              <span className="bg-black text-white px-2 py-0.5 text-[8px] md:text-[9px] font-black truncate max-w-[120px]">
                 {activeMaze.id}
               </span>
             )}
           </div>
-          <div className="flex gap-4 opacity-30 font-mono text-[9px]">
+          <div className="flex gap-4 opacity-30 font-mono text-[8px] md:text-[9px]">
             <span>
               DIM: {activeMaze ? `${activeMaze.rows}X${activeMaze.cols}` : "--"}
             </span>
@@ -188,6 +190,7 @@ function SolveCore() {
           </div>
         </div>
 
+        {/* Inner container stays flex-centered, but height is now tighter */}
         <div className="relative flex-1 bg-white overflow-hidden flex items-center justify-center">
           {activeMaze ? (
             <MazeCanvas
@@ -202,7 +205,7 @@ function SolveCore() {
               onComplete={() => setIsAnimating(false)}
             />
           ) : (
-            <p className="opacity-20 tracking-[0.5em] font-bold uppercase text-2xl">
+            <p className="opacity-20 tracking-[0.5em] font-bold uppercase text-xl md:text-2xl text-center px-6">
               Load a maze to solve
             </p>
           )}

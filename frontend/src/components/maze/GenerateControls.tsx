@@ -31,9 +31,6 @@ export default function GenerateControls({
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Clamping utility to enforce 2-300 range
-  const clamp = (val: number) => Math.min(Math.max(2, val), 300);
-
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     if (e.type === "dragenter" || e.type === "dragover") setIsDragging(true);
@@ -48,7 +45,8 @@ export default function GenerateControls({
 
   return (
     <form onSubmit={onSubmit} className="grid grid-cols-12 gap-4 items-end">
-      <div className="col-span-3 space-y-2">
+      {/* 1. Grid Dimensions: Half-width mobile, 3-cols desktop */}
+      <div className="col-span-6 md:col-span-3 order-1 space-y-2">
         <div className="flex justify-between items-end">
           <label className="block font-bold uppercase tracking-widest text-[9px]">
             Grid_Dimensions
@@ -64,7 +62,8 @@ export default function GenerateControls({
         />
       </div>
 
-      <div className="col-span-4 space-y-2">
+      {/* 2. Algorithm: Half-width mobile, 4-cols desktop */}
+      <div className="col-span-6 md:col-span-4 order-2 space-y-2">
         <label className="block font-bold uppercase tracking-widest text-[9px]">
           Algorithm
         </label>
@@ -75,8 +74,9 @@ export default function GenerateControls({
         />
       </div>
 
+      {/* 3. Source Image: Full-width mobile (Row 2), 5-cols desktop (Row 1) */}
       <div
-        className={`col-span-5 space-y-2 transition-all ${
+        className={`col-span-12 md:col-span-5 order-3 space-y-2 transition-all ${
           genType === "image"
             ? "opacity-100"
             : "opacity-0 pointer-events-none hidden"
@@ -101,7 +101,7 @@ export default function GenerateControls({
             className="hidden"
           />
           <div className="flex-1 flex items-center px-3 min-w-0">
-            <span className="truncate text-[10px] font-bold uppercase">
+            <span className="truncate text-[10px] font-bold uppercase text-left w-full">
               {selectedFile ? selectedFile.name : "Drop image here"}
             </span>
           </div>
@@ -111,13 +111,14 @@ export default function GenerateControls({
         </div>
       </div>
 
+      {/* 4. Action Button: Always full-width at the bottom */}
       <button
         type="submit"
         disabled={isSubmitDisabled || loading}
-        className={`col-span-12 border-2 border-black p-4 font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all flex items-center justify-between px-8 group
+        className={`col-span-12 order-4 border-2 border-black p-4 font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all flex items-center justify-between px-8 group mt-2
         ${
           loading || isSubmitDisabled
-            ? "bg-zinc-100 text-zinc-400 opacity-50 cursor-not-allowed" // Greyed out style
+            ? "bg-zinc-100 text-zinc-400 opacity-50 cursor-not-allowed"
             : "bg-white hover:bg-black hover:text-white cursor-pointer active:translate-y-1 active:shadow-none"
         }`}
       >

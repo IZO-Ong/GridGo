@@ -19,10 +19,13 @@ export default function NavBar() {
     e.preventDefault();
     e.stopPropagation();
     logout();
+    router.push("/");
   };
 
   return (
-    <div className="flex items-center gap-6">
+    // Changed: flex-wrap allows nav and identity to stack on mobile
+    // Added: justify-between for mobile alignment, md:justify-end for desktop
+    <div className="flex flex-wrap items-center justify-between md:justify-end gap-y-4 gap-x-6 w-full md:w-auto">
       <div className="flex items-center gap-3">
         {/* Main wrapper for the identity section */}
         <div className="flex items-center gap-3 h-10">
@@ -44,7 +47,6 @@ export default function NavBar() {
 
           {/* 2. Vertical Container for Name (Link) and Logout (Button) */}
           <div className="flex flex-col justify-center">
-            {/* The Link now ONLY wraps the Username text */}
             <Link
               href={user ? `/profile/${user}` : "/login"}
               className="text-[11px] font-black uppercase tracking-tighter leading-none hover:underline"
@@ -71,13 +73,12 @@ export default function NavBar() {
         </div>
       </div>
 
-      {/* Main Nav Items */}
-      <nav className="flex border-2 border-black divide-x-2 divide-black bg-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+      <nav className="flex border-2 border-black divide-x-2 divide-black bg-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] shrink-0">
         {navItems.map((item) => (
           <Link
             key={item.label}
             href={item.href}
-            className={`px-4 py-1 text-xs font-black uppercase transition-colors ${
+            className={`px-3 md:px-4 py-1 text-[10px] md:text-xs font-black uppercase transition-colors ${
               pathname === item.href
                 ? "bg-black text-white"
                 : "hover:bg-zinc-100 text-black"

@@ -62,7 +62,8 @@ export default function ForumCard({
     <div className="relative group transition-all duration-200 hover:-translate-y-1">
       <div
         onClick={() => router.push(`/forum/post/${post.id}`)}
-        className="flex h-48 border-4 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] group-hover:shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer overflow-hidden relative"
+        /* Changed h-48 to h-40 md:h-48 for a tighter mobile fit */
+        className="flex h-40 md:h-48 border-4 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] group-hover:shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer overflow-hidden relative"
       >
         {/* VOTE SIDEBAR */}
         <div className="flex" onClick={(e) => e.stopPropagation()}>
@@ -74,11 +75,11 @@ export default function ForumCard({
           />
         </div>
 
-        {/* MAIN CONTENT */}
-        <div className="flex-1 flex items-center p-5 gap-6 overflow-hidden">
+        {/* MAIN CONTENT - Reduced padding/gap for mobile */}
+        <div className="flex-1 flex items-center p-3 md:p-5 gap-3 md:gap-6 overflow-hidden">
           <div className="flex-1 flex flex-col justify-between h-full overflow-hidden">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-[9px] font-black uppercase opacity-40">
+            <div className="space-y-1 md:space-y-2">
+              <div className="flex items-center gap-2 text-[8px] md:text-[9px] font-black uppercase opacity-40">
                 <Link
                   href={`/profile/${post.creator?.username}`}
                   onClick={(e) => e.stopPropagation()}
@@ -91,22 +92,25 @@ export default function ForumCard({
                         : "A"}
                     </span>
                   </div>
-                  <span className="group-hover/user:underline">
+                  <span className="group-hover/user:underline truncate max-w-[60px] md:max-w-none">
                     {post.creator?.username || "anon"}
                   </span>
                 </Link>
                 <span>•</span>
-                <span>{new Date(post.created_at).toLocaleDateString()}</span>
+                <span className="truncate">
+                  {new Date(post.created_at).toLocaleDateString()}
+                </span>
               </div>
-              <h2 className="text-xl font-black uppercase tracking-tighter truncate">
+              {/* Scaled text sizes for mobile */}
+              <h2 className="text-base md:text-xl font-black uppercase tracking-tighter truncate">
                 {post.title}
               </h2>
-              <p className="text-sm opacity-70 line-clamp-3 leading-tight">
+              <p className="text-xs md:text-sm opacity-70 line-clamp-2 md:line-clamp-3 leading-tight">
                 {post.content}
               </p>
             </div>
 
-            <div className="flex items-center gap-4 shrink-0 text-[10px] font-black uppercase">
+            <div className="flex items-center gap-3 md:gap-4 shrink-0 text-[8px] md:text-[10px] font-black uppercase">
               {post.maze_id && (
                 <Link
                   href={`/solve?id=${post.maze_id}`}
@@ -124,8 +128,9 @@ export default function ForumCard({
             </div>
           </div>
 
+          {/* THUMBNAIL - Visible on mobile, slightly smaller */}
           {post.maze?.thumbnail && (
-            <div className="hidden md:block h-32 w-32 border-4 border-black relative shrink-0 overflow-hidden bg-zinc-100 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+            <div className="h-24 w-24 md:h-32 md:w-32 border-2 md:border-4 border-black relative shrink-0 overflow-hidden bg-zinc-100 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
               <img
                 src={post.maze.thumbnail}
                 alt="Preview"
@@ -135,18 +140,18 @@ export default function ForumCard({
           )}
         </div>
 
-        {/* DELETE BUTTON - Nested inside the moving container */}
+        {/* DELETE BUTTON */}
         {isOwner && onDelete && (
           <button
             onClick={(e) => {
               e.stopPropagation();
               onDelete(post.id);
             }}
-            className="absolute top-2 right-2 bg-black text-white p-1.5 border-2 border-black opacity-0 group-hover:opacity-100 transition-all hover:bg-red-600 z-30 cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none"
+            className="absolute top-1 right-1 md:top-2 md:right-2 bg-black text-white p-1 md:p-1.5 border-2 border-black opacity-100 md:opacity-0 group-hover:opacity-100 transition-all hover:bg-red-600 z-30 cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none"
           >
             <svg
-              width="14"
-              height="14"
+              width="12"
+              height="12"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"

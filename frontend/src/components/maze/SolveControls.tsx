@@ -46,18 +46,18 @@ export default function SolveControls({
         handleLoadID();
       }}
     >
-      <div className="col-span-3 space-y-2">
+      {/* 1. Reference ID: Stays first */}
+      <div className="col-span-6 md:col-span-3 order-1 space-y-2">
         <label className="block font-bold uppercase tracking-widest text-[9px]">
           Reference_ID
         </label>
-        {/* Single-button cloud load interface */}
         <div className="flex border-2 border-black h-[38px] divide-x-2 divide-black bg-white">
           <input
             type="text"
             value={mazeId}
             onChange={(e) => setMazeId(e.target.value.toUpperCase())}
             placeholder="M-000000-X"
-            className="flex-1 min-w-0 px-3 outline-none font-mono font-bold text-[10px] bg-transparent uppercase"
+            className="flex-1 min-w-0 px-3 outline-none font-mono font-bold text-[10px] bg-transparent uppercase text-left"
           />
           <button
             type="button"
@@ -69,7 +69,20 @@ export default function SolveControls({
         </div>
       </div>
 
-      <div className="col-span-3 space-y-2">
+      {/* 2. Algorithm: Moved before coordinates */}
+      <div className="col-span-6 md:col-span-3 order-2 space-y-2">
+        <label className="block font-bold uppercase tracking-widest text-[9px]">
+          Algorithm
+        </label>
+        <AlgorithmSelect
+          value={solveType}
+          onChange={setSolveType}
+          options={algorithms}
+        />
+      </div>
+
+      {/* 3. Start Coordinate: Flows to line 2 on mobile */}
+      <div className="col-span-6 md:col-span-3 order-3 space-y-2">
         <label className="block font-bold uppercase tracking-widest text-[9px]">
           Start Coordinate
         </label>
@@ -91,7 +104,8 @@ export default function SolveControls({
         />
       </div>
 
-      <div className="col-span-3 space-y-2">
+      {/* 4. End Coordinate: Flows to line 2 on mobile */}
+      <div className="col-span-6 md:col-span-3 order-4 space-y-2">
         <label className="block font-bold uppercase tracking-widest text-[9px]">
           End Coordinate
         </label>
@@ -112,22 +126,12 @@ export default function SolveControls({
         />
       </div>
 
-      <div className="col-span-3 space-y-2">
-        <label className="block font-bold uppercase tracking-widest text-[9px]">
-          Algorithm
-        </label>
-        <AlgorithmSelect
-          value={solveType}
-          onChange={setSolveType}
-          options={algorithms}
-        />
-      </div>
-
+      {/* 5. Action Button: Always at the bottom */}
       <button
         type="button"
         onClick={handleAction}
         disabled={!activeMaze && !isAnimating}
-        className={`col-span-12 border-2 border-black p-4 font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all flex items-center justify-between px-8 group
+        className={`col-span-12 order-5 border-2 border-black p-4 font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all flex items-center justify-between px-8 group mt-2
         ${
           isAnimating
             ? "bg-black text-white cursor-pointer active:translate-y-1 active:shadow-none"

@@ -31,7 +31,7 @@ export default function CreatePage() {
   const { dims, updateDim, clampDimensions, handleImageChange } =
     useImageDimensions();
 
-  // TRANSITION LOGIC: Clear UI state on Identity Change (Login or Logout)
+  // TRANSITION LOGIC: Clear UI state on Identity Change
   useEffect(() => {
     if (hasLoaded) {
       setActiveMaze(null);
@@ -158,34 +158,35 @@ export default function CreatePage() {
         </div>
       )}
 
-      <section className="relative border-4 border-black h-[750px] bg-zinc-50 overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col">
-        <div className="h-7 border-b-2 border-black bg-white flex items-center px-3 justify-between z-30 shrink-0">
+      {/* TIGHTER MOBILE: Using aspect ratio to keep Maze closer to the top bar */}
+      <section className="relative border-4 border-black bg-zinc-50 overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col transition-all aspect-[4/5] sm:aspect-auto md:h-[750px]">
+        {/* Tighter responsive header */}
+        <div className="min-h-7 py-1 md:py-0 border-b-2 border-black bg-white flex flex-wrap items-center px-3 justify-between z-30 shrink-0 uppercase text-[9px] md:text-[10px] font-bold gap-y-2">
           <div className="flex items-center gap-3">
-            <span className="text-[10px] font-bold tracking-widest uppercase">
-              MAZE_OUTPUT
-            </span>
+            <span className="tracking-widest">MAZE_OUTPUT</span>
             {activeMaze?.id && (
-              <span className="bg-black text-white px-2 py-0.5 text-[9px] font-black tracking-tighter">
+              <span className="bg-black text-white px-2 py-0.5 text-[8px] md:text-[9px] font-black truncate max-w-[120px]">
                 {activeMaze.id}
               </span>
             )}
           </div>
 
-          <span className="text-[10px] opacity-30 font-bold uppercase">
+          <span className="opacity-30">
             DIM:{" "}
             {activeMaze
-              ? `${activeMaze.rows}x${activeMaze.cols}`
-              : `${dims.rows}x${dims.cols}`}
+              ? `${activeMaze.rows}X${activeMaze.cols}`
+              : `${dims.rows}X${dims.cols}`}
           </span>
         </div>
 
-        <div className="relative flex-1 bg-white overflow-hidden">
+        {/* Centered maze area is now tighter vertically on mobile */}
+        <div className="relative flex-1 bg-white overflow-hidden flex items-center justify-center">
           <div className="absolute inset-0 bg-[radial-gradient(#000000_1px,transparent_1px)] [background-size:32px_32px] opacity-[0.05] pointer-events-none" />
           {activeMaze ? (
             <MazeCanvas maze={activeMaze} showSave={true} showShare={false} />
           ) : (
             <div className="h-full w-full flex items-center justify-center">
-              <p className="opacity-20 tracking-[0.5em] font-bold uppercase text-2xl text-center px-12">
+              <p className="opacity-20 tracking-[0.5em] font-bold uppercase text-xl md:text-2xl text-center px-6">
                 Generate a Maze!
               </p>
             </div>

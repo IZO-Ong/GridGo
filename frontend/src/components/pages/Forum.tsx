@@ -52,12 +52,12 @@ export default function ForumPage() {
         )}
 
         {!loading && posts.length === 0 && (
-          <div className="p-20 border-4 border-dashed border-black text-center">
-            <div className="font-black uppercase italic opacity-30 text-2xl tracking-tighter">
+          <div className="w-full p-10 md:p-20 border-4 border-dashed border-black flex flex-col items-center justify-center text-center">
+            <div className="font-black uppercase italic opacity-30 text-xl md:text-2xl tracking-tighter">
               NOTHING_TO_SEE_HERE
             </div>
-            <p className="text-[10px] font-black uppercase opacity-20 mt-2">
-              Contiribute to the forum by logging in and posting!
+            <p className="text-[9px] md:text-[10px] font-black uppercase opacity-20 mt-2 max-w-[250px] md:max-w-none">
+              Contribute to the forum by logging in and posting!
             </p>
           </div>
         )}

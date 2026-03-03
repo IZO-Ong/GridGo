@@ -5,7 +5,8 @@ import { useMazeCanvas } from "@/hooks/useMazeCanvas";
 import { renderMazeImage } from "@/lib/api";
 import ShareModal from "@/components/modal/ShareModal";
 
-const PADDING = 800;
+const DESKTOP_PADDING = 800;
+const MOBILE_PADDING = 100;
 
 interface MazeCanvasProps {
   maze: Maze;
@@ -35,6 +36,22 @@ export default function MazeCanvas({
   const [visibleSolutionStep, setVisibleSolutionStep] = useState(0);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
+  // Tracking for pinch-zoom
+  const lastPinchDistRef = useRef<number | null>(null);
+
+  const [currentPadding, setCurrentPadding] = useState(DESKTOP_PADDING);
+
+  useEffect(() => {
+    const updatePadding = () => {
+      setCurrentPadding(
+        window.innerWidth < 768 ? MOBILE_PADDING : DESKTOP_PADDING
+      );
+    };
+    updatePadding();
+    window.addEventListener("resize", updatePadding);
+    return () => window.removeEventListener("resize", updatePadding);
+  }, []);
+
   const {
     containerRef,
     dynamicCellSize,
@@ -45,6 +62,66 @@ export default function MazeCanvas({
     centerMaze,
   } = useMazeCanvas(maze);
 
+  // --- NATIVE PINCH AND DRAG HANDLERS ---
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        e.preventDefault(); // Block native pinch-zoom
+        lastPinchDistRef.current = Math.hypot(
+          e.touches[0].pageX - e.touches[1].pageX,
+          e.touches[0].pageY - e.touches[1].pageY
+        );
+      } else if (e.touches.length === 1) {
+        // Pass to hook for panning
+        onMouseDown(e as any);
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 2 && lastPinchDistRef.current !== null) {
+        e.preventDefault(); // Stop page scrolling
+        const rect = container.getBoundingClientRect();
+        const dist = Math.hypot(
+          e.touches[0].pageX - e.touches[1].pageX,
+          e.touches[0].pageY - e.touches[1].pageY
+        );
+
+        // Midpoint for focal zoom
+        const midX = (e.touches[0].pageX + e.touches[1].pageX) / 2 - rect.left;
+        const midY = (e.touches[0].pageY + e.touches[1].pageY) / 2 - rect.top;
+
+        const delta = dist - lastPinchDistRef.current;
+        if (Math.abs(delta) > 2) {
+          // Delta > 0 means spreading fingers (zoom in) -> handleZoom expects < 0
+          handleZoom(delta > 0 ? -1 : 1, midX, midY);
+          lastPinchDistRef.current = dist;
+        }
+      }
+    };
+
+    const handleTouchEnd = () => {
+      lastPinchDistRef.current = null;
+    };
+
+    container.addEventListener("touchstart", handleTouchStart, {
+      passive: false,
+    });
+    container.addEventListener("touchmove", handleTouchMove, {
+      passive: false,
+    });
+    container.addEventListener("touchend", handleTouchEnd);
+
+    return () => {
+      container.removeEventListener("touchstart", handleTouchStart);
+      container.removeEventListener("touchmove", handleTouchMove);
+      container.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, [handleZoom, onMouseDown, containerRef]);
+
+  // --- RENDERING LOGIC ---
   const totalNodes = (highlights?.length || 0) + (solutionPath?.length || 0);
   const stepSize = useMemo(() => Math.max(1, totalNodes / 540), [totalNodes]);
 
@@ -98,14 +175,13 @@ export default function MazeCanvas({
         lastTime = time;
       }
 
-      // Trigger completion after the UI has processed the update
       if (
         visibleHighlights >= highlights.length &&
         visibleSolutionStep >= solutionPath.length &&
         onComplete
       ) {
         onComplete();
-        return; // Stop animation loop
+        return;
       }
 
       frame = requestAnimationFrame(animate);
@@ -145,13 +221,13 @@ export default function MazeCanvas({
     const ctx = canvas.getContext("2d", { alpha: false });
     if (!ctx) return;
 
-    canvas.width = container.clientWidth + PADDING * 2;
-    canvas.height = container.clientHeight + PADDING * 2;
+    canvas.width = container.clientWidth + currentPadding * 2;
+    canvas.height = container.clientHeight + currentPadding * 2;
     ctx.fillStyle = "white";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.save();
-    ctx.translate(transform.x + PADDING, transform.y + PADDING);
+    ctx.translate(transform.x + currentPadding, transform.y + currentPadding);
     ctx.scale(transform.s, transform.s);
 
     const cellSize = dynamicCellSize;
@@ -243,18 +319,19 @@ export default function MazeCanvas({
     visibleSolutionStep,
     overrideStart,
     overrideEnd,
+    currentPadding,
   ]);
 
   return (
-    <div className="relative w-full h-full flex items-center justify-center p-8">
+    <div className="relative w-full h-full flex items-center justify-center p-2 pt-0 md:p-8">
       <div
         ref={containerRef}
-        className="w-full h-full relative overflow-hidden border-2 border-black bg-white cursor-grab active:cursor-grabbing"
+        className="w-full h-full relative overflow-hidden border-2 border-black bg-white cursor-grab active:cursor-grabbing touch-none"
         onMouseDown={onMouseDown}
       >
         <div
           style={{
-            transform: `translate3d(${cssOffset.x - PADDING}px, ${cssOffset.y - PADDING}px, 0)`,
+            transform: `translate3d(${cssOffset.x - currentPadding}px, ${cssOffset.y - currentPadding}px, 0)`,
             willChange: "transform",
           }}
         >
@@ -274,16 +351,17 @@ export default function MazeCanvas({
       )}
 
       {(showSave || showShare) && (
-        <div className="absolute bottom-6 left-6 border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] z-30">
+        <div className="absolute bottom-4 left-4 md:bottom-6 md:left-6 border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] z-30">
           {showSave ? (
             <button
               onClick={handleSave}
               title="Save to PNG"
-              className="p-3 hover:bg-black hover:text-white transition-colors cursor-pointer"
+              className="p-2 md:p-3 hover:bg-black hover:text-white transition-colors cursor-pointer"
             >
               <svg
-                width="20"
-                height="20"
+                width="18"
+                height="18"
+                className="md:w-[20px] md:h-[20px]"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -300,11 +378,12 @@ export default function MazeCanvas({
             <button
               onClick={handleShare}
               title="Share Maze Link"
-              className="p-3 hover:bg-black hover:text-white transition-colors cursor-pointer"
+              className="p-2 md:p-3 hover:bg-black hover:text-white transition-colors cursor-pointer"
             >
               <svg
-                width="20"
-                height="20"
+                width="18"
+                height="18"
+                className="md:w-[20px] md:h-[20px]"
                 viewBox="0 0 24 24"
                 fill="currentColor"
                 stroke="currentColor"
@@ -317,13 +396,13 @@ export default function MazeCanvas({
         </div>
       )}
 
-      <div className="absolute bottom-6 right-6 flex flex-col border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] divide-y-2 divide-black z-30">
+      <div className="absolute bottom-4 right-4 md:bottom-6 md:right-6 flex flex-col border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] divide-y-2 divide-black z-30">
         <button
           onClick={() => {
             const r = containerRef.current?.getBoundingClientRect();
             if (r) handleZoom(-1, r.width / 2, r.height / 2);
           }}
-          className="p-3 hover:bg-black hover:text-white font-bold text-lg"
+          className="p-2 md:p-3 hover:bg-black hover:text-white font-bold text-base md:text-lg"
         >
           +
         </button>
@@ -332,13 +411,13 @@ export default function MazeCanvas({
             const r = containerRef.current?.getBoundingClientRect();
             if (r) handleZoom(1, r.width / 2, r.height / 2);
           }}
-          className="p-3 hover:bg-black hover:text-white font-bold text-lg"
+          className="p-2 md:p-3 hover:bg-black hover:text-white font-bold text-base md:text-lg"
         >
           -
         </button>
         <button
           onClick={() => centerMaze(dynamicCellSize)}
-          className="p-2 text-[9px] hover:bg-black hover:text-white font-bold uppercase"
+          className="p-1.5 md:p-2 text-[8px] md:text-[9px] hover:bg-black hover:text-white font-bold uppercase"
         >
           Reset
         </button>
