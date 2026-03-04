@@ -10,6 +10,7 @@ type Maze struct {
 	ID          string    `gorm:"primaryKey" json:"id"`
 	// CreatorID is a pointer to allow for maze generation by guest account.
 	CreatorID   *string   `gorm:"type:uuid" json:"creator_id"`
+	Creator     *User     `gorm:"foreignKey:CreatorID" json:"-"`
 	// WeightsJSON stores the edge/wall weights of the grid in a optimized JSONB format.
 	WeightsJSON string    `gorm:"type:jsonb;not null" json:"weights_json"`
 	Thumbnail   string    `gorm:"type:text" json:"thumbnail"` // Base64 for gallery previews

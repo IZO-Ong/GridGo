@@ -67,26 +67,31 @@ func HandleOAuthLogin(w http.ResponseWriter, r *http.Request) {
 // HandleOAuthCallback handles the return from Google. It creates a user 
 // record if it's the first time they log in via Google, then redirects back to the frontend
 func HandleOAuthCallback(w http.ResponseWriter, r *http.Request) {
-	user, err := gothic.CompleteUserAuth(w, r)
-	if err != nil { return }
+    user, err := gothic.CompleteUserAuth(w, r)
+    if err != nil { return }
 
-	var dbUser models.User
-	// if user doesn't exist, create new record with placeholder password
-	if db.DB.Where("email = ?", user.Email).Find(&dbUser).Error != nil {
-		dbUser = models.User{Username: user.NickName, Email: user.Email, PasswordHash: "OAUTH_ACCOUNT"}
-		db.DB.Create(&dbUser)
-	}
+    var dbUser models.User
+    // FirstOrCreate to atomically handle the check or create logic
+    err = db.DB.Where(models.User{Email: user.Email}).
+        Attrs(models.User{
+            Username:     user.NickName, 
+            PasswordHash: "OAUTH_ACCOUNT",
+        }).
+        FirstOrCreate(&dbUser).Error
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user_id": dbUser.ID,
-		"exp":     time.Now().Add(time.Hour * 12).Unix(),
-	})
-	
-	tokenString, _ := token.SignedString(middleware.GetJWTKey())
-	
-	// Construct the frontend redirect with the new token
-	url := fmt.Sprintf("%s/auth-callback?token=%s&username=%s", os.Getenv("FRONTEND_URL"), tokenString, dbUser.Username)
-	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+    if err != nil {
+        http.Error(w, "AUTH_FAILURE", 500)
+        return
+    }
+
+    token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+        "user_id": dbUser.ID,
+        "exp":     time.Now().Add(time.Hour * 12).Unix(),
+    })
+    
+    tokenString, _ := token.SignedString(middleware.GetJWTKey())
+    url := fmt.Sprintf("%s/auth-callback?token=%s&username=%s", os.Getenv("FRONTEND_URL"), tokenString, dbUser.Username)
+    http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
 // HandleRegister initiates the registration process by staging the user 

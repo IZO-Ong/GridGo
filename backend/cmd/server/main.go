@@ -42,7 +42,7 @@ func main() {
 	// Create a new request multiplexer
 	mux := http.NewServeMux()
 
-	// --- Maze Endpoints ---
+	// Maze Endpoints
 	// Handles creation, retrieval and visualization of maze grids.
 	mux.HandleFunc("/api/maze/generate", middleware.OptionalAuth(handlers.HandleGenerateMaze))
 	mux.HandleFunc("/api/maze/get", handlers.HandleGetMaze)
@@ -50,30 +50,30 @@ func main() {
 	mux.HandleFunc("/api/maze/delete", middleware.RequireAuth(handlers.HandleDeleteMaze))
 	mux.HandleFunc("/api/maze/solve", handlers.HandleSolveMaze)
 	mux.HandleFunc("/api/maze/render", handlers.HandleRenderMaze)
-	mux.HandleFunc("/api/maze/thumbnail", handlers.HandleUpdateThumbnail)
+	mux.HandleFunc("/api/maze/thumbnail", middleware.OptionalAuth(handlers.HandleUpdateThumbnail))
 
-	// --- User & Profile Endpoints ---
+	// User & Profile Endpoints
 	// Manages user-specific metadata and settings.
 	mux.HandleFunc("/api/profile", middleware.OptionalAuth(handlers.HandleGetProfile))
 
-	// --- Post Endpoints ---
+	// Post Endpoints
 	// Core forum functionality for sharing mazes or general discussion.
 	mux.HandleFunc("/api/forum/posts", middleware.OptionalAuth(handlers.HandleGetPosts))
 	mux.HandleFunc("/api/forum/posts/create", middleware.RequireAuth(handlers.HandleCreatePost))
 	mux.HandleFunc("/api/forum/post", middleware.OptionalAuth(handlers.HandleGetPostByID))
 	mux.HandleFunc("/api/forum/post/delete", middleware.RequireAuth(handlers.HandleDeletePost))
 
-	// --- Comment Endpoints ---
+	// Comment Endpoints
 	// Handles nested interaction within forum posts.
 	mux.HandleFunc("/api/forum/comments", middleware.OptionalAuth(handlers.HandleGetComments))
 	mux.HandleFunc("/api/forum/comment/create", middleware.RequireAuth(handlers.HandleCreateComment))
 	mux.HandleFunc("/api/forum/comment/delete", middleware.RequireAuth(handlers.HandleDeleteComment))
 
-	// --- Voting Endpoint ---
+	// Voting Endpoint
 	// Unified endpoint for upvoting/downvoting posts or comments.
 	mux.HandleFunc("/api/forum/vote", middleware.RequireAuth(handlers.HandleVote))
 
-	// --- Auth Routes ---
+	// Auth Routes
 	// Manages standard email/password registration and Google OAuth flow.
 	mux.HandleFunc("/api/login", handlers.HandleLogin)
 	mux.HandleFunc("/api/register", handlers.HandleRegister)

@@ -7,12 +7,14 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/IZO-Ong/gridgo/internal/db"
 	"github.com/IZO-Ong/gridgo/internal/maze"
 	"github.com/IZO-Ong/gridgo/internal/middleware"
 	"github.com/IZO-Ong/gridgo/internal/models"
 	"github.com/IZO-Ong/gridgo/internal/utils"
+	"gorm.io/gorm"
 )
 
 // HandleGenerateMaze creates a new maze grid based on the requested algorithm.
@@ -73,7 +75,15 @@ func HandleGenerateMaze(w http.ResponseWriter, r *http.Request) {
 	// Associate with user if authenticated
 	if userID != "" { dbMaze.CreatorID = &userID }
 
-	db.DB.Create(&dbMaze)
+	if err := db.DB.Create(&dbMaze).Error; err == nil && userID != "" {
+        db.RDB.Del(db.Ctx, "user:mazes:"+userID)
+
+        var username string
+        if err := db.DB.Model(&models.User{}).Where("id = ?", userID).Pluck("username", &username).Error; err == nil {
+            db.RDB.Del(db.Ctx, "profile:public:"+username)
+        }
+    }
+
 	myMaze.ID = mazeID
 	json.NewEncoder(w).Encode(myMaze)
 }
@@ -115,7 +125,7 @@ func HandleSolveMaze(w http.ResponseWriter, r *http.Request) {
 	var visited [][2]int
 	var path [][2]int
 
-	// Route to algorithm implementation in maze package
+	// Route to algorithm in maze package
 	switch payload.Algorithm {
 	case "astar":
 		visited, path = payload.Maze.SolveAStar()
@@ -138,85 +148,138 @@ func HandleSolveMaze(w http.ResponseWriter, r *http.Request) {
 // HandleGetMaze retrieves a maze by ID and reconstructs its full grid 
 // object from the stored JSON weights.
 func HandleGetMaze(w http.ResponseWriter, r *http.Request) {
-	mazeID := r.URL.Query().Get("id")
-	var m models.Maze
-	if err := db.DB.First(&m, "id = ?", mazeID).Error; err != nil {
-		http.Error(w, "Maze not found", 404)
-		return
-	}
+    mazeID := r.URL.Query().Get("id")
+    cacheKey := "maze:reconstructed:" + mazeID
 
-	var savedWeights map[string]int
-	json.Unmarshal([]byte(m.WeightsJSON), &savedWeights)
+    // Cache a map[string]interface{} to match response format
+    data, err := db.GetOrSet(db.Ctx, cacheKey, 24*time.Hour, func() (*map[string]interface{}, error) {
+        var m models.Maze
+        if err := db.DB.First(&m, "id = ?", mazeID).Error; err != nil {
+            return nil, err
+        }
 
-	// Reinflate the grid structure
-	reconstructed := maze.NewMaze(m.Rows, m.Cols)
-	reconstructed.GenerateImageMaze(savedWeights)
+        var savedWeights map[string]int
+        json.Unmarshal([]byte(m.WeightsJSON), &savedWeights)
 
-	// Mapping of weights back into  cell structs
-	for r := range m.Rows {
-		for c := range m.Cols {
-			if v, ok := savedWeights[fmt.Sprintf("%d-%d-top", r, c)]; ok { reconstructed.Grid[r][c].WallWeights[0] = v }
-			if v, ok := savedWeights[fmt.Sprintf("%d-%d-right", r, c)]; ok { reconstructed.Grid[r][c].WallWeights[1] = v }
-			if v, ok := savedWeights[fmt.Sprintf("%d-%d-bottom", r, c)]; ok { reconstructed.Grid[r][c].WallWeights[2] = v }
-			if v, ok := savedWeights[fmt.Sprintf("%d-%d-left", r, c)]; ok { reconstructed.Grid[r][c].WallWeights[3] = v }
-		}
-	}
+        // Reinflate the grid structure
+        reconstructed := maze.NewMaze(m.Rows, m.Cols)
+        reconstructed.GenerateImageMaze(savedWeights)
 
-	reconstructed.SetManualStartEnd(m.StartRow, m.StartCol, m.EndRow, m.EndCol)
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"id": m.ID, "rows": m.Rows, "cols": m.Cols, "grid": reconstructed.Grid,
-		"start": [2]int{m.StartRow, m.StartCol}, "end": [2]int{m.EndRow, m.EndCol},
-	})
+        // Mapping of weights back into cell structs
+        for r := range m.Rows {
+            for c := range m.Cols {
+                if v, ok := savedWeights[fmt.Sprintf("%d-%d-top", r, c)]; ok { reconstructed.Grid[r][c].WallWeights[0] = v }
+                if v, ok := savedWeights[fmt.Sprintf("%d-%d-right", r, c)]; ok { reconstructed.Grid[r][c].WallWeights[1] = v }
+                if v, ok := savedWeights[fmt.Sprintf("%d-%d-bottom", r, c)]; ok { reconstructed.Grid[r][c].WallWeights[2] = v }
+                if v, ok := savedWeights[fmt.Sprintf("%d-%d-left", r, c)]; ok { reconstructed.Grid[r][c].WallWeights[3] = v }
+            }
+        }
+
+        reconstructed.SetManualStartEnd(m.StartRow, m.StartCol, m.EndRow, m.EndCol)
+        
+        // Return formatted response map
+        result := map[string]interface{}{
+            "id": m.ID, "rows": m.Rows, "cols": m.Cols, "grid": reconstructed.Grid,
+            "start": [2]int{m.StartRow, m.StartCol}, "end": [2]int{m.EndRow, m.EndCol},
+        }
+        return &result, nil
+    })
+
+    if err != nil {
+        http.Error(w, "Maze not found", 404)
+        return
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(data)
 }
 
 // HandleGetMyMazes returns a list of all mazes created by the current user.
 func HandleGetMyMazes(w http.ResponseWriter, r *http.Request) {
-	userID := middleware.GetUserID(r)
-	if userID == "" {
-		http.Error(w, "AUTH_REQUIRED", 401)
-		return
-	}
+    userID := middleware.GetUserID(r)
+    if userID == "" {
+        http.Error(w, "AUTH_REQUIRED", 401)
+        return
+    }
 
-	var mazes []models.Maze
-	db.DB.Where("creator_id = ?", userID).Order("created_at desc").Find(&mazes)
-	
-	json.NewEncoder(w).Encode(mazes)
+    cacheKey := "user:mazes:" + userID
+
+    mazes, err := db.GetOrSet(db.Ctx, cacheKey, 10*time.Minute, func() (*[]models.Maze, error) {
+        var m []models.Maze
+        err := db.DB.Where("creator_id = ?", userID).Order("created_at desc").Find(&m).Error
+        return &m, err
+    })
+
+    if err != nil {
+        http.Error(w, "DB_ERROR", 500)
+        return
+    }
+    
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(mazes)
 }
 
 // HandleDeleteMaze removes a maze, with authorization check for ownership.
 func HandleDeleteMaze(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodDelete { return }
-	
-	mazeID := r.URL.Query().Get("id")
-	userID := middleware.GetUserID(r)
+    if r.Method != http.MethodDelete { return }
+    
+    mazeID := r.URL.Query().Get("id")
+    userID := middleware.GetUserID(r)
 
-	result := db.DB.Where("id = ? AND creator_id = ?", mazeID, userID).Delete(&models.Maze{})
-	
-	if result.RowsAffected == 0 {
-		http.Error(w, "UNAUTHORIZED_OR_NOT_FOUND", 403)
-		return
-	}
-	w.WriteHeader(http.StatusOK)
+    var m models.Maze
+    if err := db.DB.Preload("Creator").Where("id = ? AND creator_id = ?", mazeID, userID).First(&m).Error; err != nil {
+        http.Error(w, "UNAUTHORIZED_OR_NOT_FOUND", 403)
+        return
+    }
+
+    if err := db.DB.Delete(&m).Error; err != nil {
+        http.Error(w, "DB_ERROR", 500)
+        return
+    }
+
+    // 3. INVALIDATION BATCH
+    db.RDB.Del(db.Ctx, "user:mazes:"+userID)
+    db.RDB.Del(db.Ctx, "maze:reconstructed:"+mazeID)
+    
+    // Clear the public profile so the stats (maze count) refresh
+    if m.Creator != nil {
+        db.RDB.Del(db.Ctx, "profile:public:"+m.Creator.Username)
+    }
+
+    w.WriteHeader(http.StatusOK)
 }
 
 // HandleUpdateThumbnail saves a base64 or URL thumbnail for the maze gallery.
 func HandleUpdateThumbnail(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
-		http.Error(w, "Method not allowed", 405)
-		return
+		http.Error(w, "METHOD_NOT_ALLOWED", 405); return
 	}
 
-	var payload struct {
-		ID        string `json:"id"`
-		Thumbnail string `json:"thumbnail"`
-	}
+	userID := middleware.GetUserID(r)
+	var payload struct { ID string; Thumbnail string }
 	json.NewDecoder(r.Body).Decode(&payload)
 
-	result := db.DB.Model(&models.Maze{}).Where("id = ?", payload.ID).Update("thumbnail", payload.Thumbnail)
-	
-	if result.Error != nil {
-		http.Error(w, "DB_UPDATE_FAILED", 500)
-		return
+	// Ownership & Immutability Check
+	var result *gorm.DB
+	if userID != "" {
+		result = db.DB.Model(&models.Maze{}).
+			Where("id = ? AND creator_id = ? AND (thumbnail IS NULL OR thumbnail = '')", payload.ID, userID).
+			Update("thumbnail", payload.Thumbnail)
+	} else {
+		result = db.DB.Model(&models.Maze{}).
+			Where("id = ? AND creator_id IS NULL AND (thumbnail IS NULL OR thumbnail = '')", payload.ID).
+			Update("thumbnail", payload.Thumbnail)
+	}
+
+	if result.RowsAffected > 0 {
+		if userID != "" {
+			// Clear Private Gallery
+			db.RDB.Del(db.Ctx, "user:mazes:"+userID)
+			var username string
+			db.DB.Model(&models.User{}).Where("id = ?", userID).Pluck("username", &username)
+			db.RDB.Del(db.Ctx, "profile:public:"+username)
+		}
+		db.RDB.Del(db.Ctx, "maze:reconstructed:"+payload.ID)
 	}
 	w.WriteHeader(http.StatusOK)
 }
